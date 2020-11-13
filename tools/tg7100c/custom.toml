@@ -1,0 +1,31 @@
+[param]
+interface_type = "Uart"
+comport_uart = "/dev/ttyUSB0"
+speed_uart = "2000000"
+speed_jlink = "1000"
+chip_brd = "IoTKitA"
+chip_xtal = "40M"
+aes_key = ""
+aes_iv = ""
+addr = "0x0"
+
+[check_box]
+partition_download = true
+boot2_download = true
+bin_download = true
+media_download = true
+use_romfs = false
+mfg_download = false
+ro_params_download = true
+ckb_erase_all = "True"
+encrypt = false
+download_single = false
+
+[input_path]
+pt_bin_input = "./tg7100c/partition/partition_cfg_2M.toml"
+boot2_bin_input = "./tg7100c/builtin_imgs/chipsp_boot2_release.bin"
+cfg2_bin_input = "./../../out/smart_outlet@tg7100cevb/smart_outlet@tg7100cevb.bin"
+meida_bin_input = "./tg7100c/builtin_imgs/media_release.bin"
+romfs_dir_input = ""
+mfg_bin_input = "./tg7100c/builtin_imgs/mfg/mfg_gu_bd3b261_40m.bin"
+img_bin_input = ""
