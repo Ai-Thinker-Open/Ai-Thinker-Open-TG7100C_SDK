@@ -372,6 +372,18 @@ void trace_start(void)
     aos_cli_register_commands(cmd, sizeof(cmd)/sizeof(cmd[0]));
 }
 
+#include "bl_flash.h"
+struct cli_command thrid_cmd[] = {
+    { "AT+LINKKEYCONFIG",            "set linkkit keys. linkkey [devid] [<Product Key> <Device Name> <Device Secret> <Product Secret>]", handle_set_linkkey_cmd},
+    { "AT+LINKKEYCONFIG?",           "get linkkit keys. linkkey [devid] [<Product Key> <Device Name> <Device Secret> <Product Secret>]", handle_get_linkkey_cmd},
+};
+
+void set_get_thrid(void)        //GSJ
+{
+    //注册set、get三元组指令
+    aos_cli_register_commands(thrid_cmd, sizeof(thrid_cmd)/sizeof(thrid_cmd[0]));
+}
+
 static void app_loop_entry(void *arg)
 {
     hal_wifi_init();
@@ -387,6 +399,11 @@ static void aos_init_entry(void *p_arg)
   bl_dma_init();
   hal_boot2_init();
   hal_flash_init(KV_PTN);
+
+  //GSJ   优先初始化KV空间
+  #ifdef AOS_KV
+    aos_kv_init();
+  #endif
 
   /* board config is set after system is init*/
   hal_board_cfg(0);
@@ -408,7 +425,7 @@ void bfl_main(void)
 
   bl_irq_init();
 
-  uart0_rbuf_init(2000000);
+  uart0_rbuf_init(115200);
   bl_sys_init();
 
   aos_init();

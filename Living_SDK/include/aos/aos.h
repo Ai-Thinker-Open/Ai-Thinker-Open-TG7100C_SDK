@@ -39,6 +39,7 @@ extern "C" {
  */
 int32_t aos_uart_send(void *data, uint32_t size, uint32_t timeout);
 
+int32_t my_aos_uart_send(void *data, uint32_t size, uint32_t timeout);
 
 /**
  * Recv data on a UART interface

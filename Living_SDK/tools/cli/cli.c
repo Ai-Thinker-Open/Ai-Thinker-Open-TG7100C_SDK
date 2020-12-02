@@ -92,7 +92,7 @@ static int proc_onecmd(int argc, char *argv[])
 
     if (!cli->echo_disabled)
     {
-        csp_printf("\r\n");
+        aos_cli_printf("\r\n");
         fflush(stdout);
     }
 
@@ -199,7 +199,15 @@ static int handle_input(char *inbuf)
             }
             break;
 
-        case ' ':
+        case ',':       //Friday
+            // if (!stat.inQuote && stat.inArg)
+            // {
+            //     stat.inArg = 0;
+            //     inbuf[i] = '\0';
+            // }
+            break;
+        case '=':       //Firday
+        //case ' ':     //Firday
             if (i > 0 && inbuf[i - 1] == '\\' && stat.inArg)
             {
                 memcpy(&inbuf[i - 1], &inbuf[i],
@@ -589,7 +597,7 @@ static int get_input(char *inbuf, unsigned int *bp)
 
         if (!cli->echo_disabled)
         {
-            csp_printf("%c", c);
+            aos_cli_printf("%c", c);
             fflush(stdout);
         }
 
@@ -661,7 +669,7 @@ static void cli_main(void *data)
             aos_cli_printf("\r\n");
             esc_tag[0] = '\x0';
             esc_tag_len = 0;
-            aos_cli_printf(PROMPT);
+            // aos_cli_printf(PROMPT);
         }
     }
 
@@ -674,8 +682,8 @@ static void cli_main(void *data)
 
 static void help_cmd(char *buf, int len, int argc, char **argv);
 static void version_cmd(char *buf, int len, int argc, char **argv);
-#if (AOS_CLI_MINI_SIZE <= 0)
 static void echo_cmd(char *buf, int len, int argc, char **argv);
+#if (AOS_CLI_MINI_SIZE <= 0)
 static void exit_cmd(char *buf, int len, int argc, char **argv);
 static void devname_cmd(char *buf, int len, int argc, char **argv);
 #endif
@@ -688,24 +696,24 @@ static void ip_cmd(char *buf, int32_t len, int32_t argc, char **argv);
 
 static const struct cli_command built_ins[] = {
     /*cli self*/
-    {"help", NULL, help_cmd},
-#if (AOS_CLI_MINI_SIZE <= 0)
-    {"echo", NULL, echo_cmd},
+    {"AT+HELP", NULL, help_cmd},
+    {"AT+UARTE", "uart echo", echo_cmd},
+// #if (AOS_CLI_MINI_SIZE <= 0)
 
-    {"exit", "CLI exit", exit_cmd},
-    {"devname", "print device name", devname_cmd},
-#endif
+//     {"exit", "CLI exit", exit_cmd},
+//     {"devname", "print device name", devname_cmd},
+// #endif
 
-    /*rhino*/
-    {"sysver", NULL, version_cmd},
-    {"reboot", "reboot system", reboot_cmd},
+//     /*rhino*/
+//     {"sysver", NULL, version_cmd},
+//     {"reboot", "reboot system", reboot_cmd},
 
-    /*aos_rhino*/
-    {"time", "system time", uptime_cmd},
-    {"ota", "system ota", ota_cmd},
-    {"p", "print memory", pmem_cmd},
-    {"m", "modify memory", mmem_cmd},
-    {"ip", "show lan ip", ip_cmd},
+//     /*aos_rhino*/
+//     {"time", "system time", uptime_cmd},
+//     {"ota", "system ota", ota_cmd},
+//     {"p", "print memory", pmem_cmd},
+//     {"m", "modify memory", mmem_cmd},
+    {"AT+CWLIF", "show lan ip", ip_cmd},
 
 };
 
@@ -721,8 +729,8 @@ static void help_cmd(char *buf, int len, int argc, char **argv)
     build_in_count++;
 #endif
 
-    aos_cli_printf("====Build-in Commands====\r\n");
-    aos_cli_printf("====Support six cmds once, seperate by ; ====\r\n");
+    // aos_cli_printf("====Build-in Commands====\r\n");
+    // aos_cli_printf("====Support six cmds once, seperate by ; ====\r\n");
 
     for (i = 0, n = 0; i < MAX_COMMANDS && n < cli->num_commands; i++)
     {
@@ -734,7 +742,7 @@ static void help_cmd(char *buf, int len, int argc, char **argv)
             if (n == build_in_count)
             {
                 aos_cli_printf("\r\n");
-                aos_cli_printf("====User Commands====\r\n");
+                // aos_cli_printf("====User Commands====\r\n");
             }
         }
     }
@@ -749,7 +757,6 @@ static void version_cmd(char *buf, int len, int argc, char **argv)
 #endif
 }
 
-#if (AOS_CLI_MINI_SIZE <= 0)
 
 static void echo_cmd(char *buf, int len, int argc, char **argv)
 {
@@ -760,17 +767,21 @@ static void echo_cmd(char *buf, int len, int argc, char **argv)
         return;
     }
 
-    if (!strcmp(argv[1], "on"))
+    if (!strcmp(argv[1], "1"))
     {
-        aos_cli_printf("Enable echo\r\n");
+        aos_cli_printf("OK\r\n");
         cli->echo_disabled = 0;
     }
-    else if (!strcmp(argv[1], "off"))
+    else if (!strcmp(argv[1], "0"))
     {
-        aos_cli_printf("Disable echo\r\n");
+        aos_cli_printf("OK\r\n");
         cli->echo_disabled = 1;
+    }else{
+        aos_cli_printf("ERROR\r\n");
     }
 }
+
+#if (AOS_CLI_MINI_SIZE <= 0)
 
 static void exit_cmd(char *buf, int len, int argc, char **argv)
 {
@@ -1153,7 +1164,7 @@ int cli_putstr(char *msg)
 {
     if (msg[0] != 0)
     {
-        aos_uart_send(msg, strlen(msg), 0);
+        my_aos_uart_send(msg, strlen(msg), 0);
     }
 
     return 0;

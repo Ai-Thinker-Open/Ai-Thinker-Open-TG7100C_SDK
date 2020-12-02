@@ -579,8 +579,14 @@ int aos_mkdir(const char *path)
 }
 
 extern uart_dev_t uart_0;
+extern uart_dev_t uart_1;
 
 int32_t aos_uart_send(void *data, uint32_t size, uint32_t timeout)
+{
+    return hal_uart_send(&uart_1, data, size, timeout);
+}
+
+int32_t my_aos_uart_send(void *data, uint32_t size, uint32_t timeout)
 {
     return hal_uart_send(&uart_0, data, size, timeout);
 }

@@ -12,6 +12,7 @@
 #define RTC_FREQ   (10*1000*1000UL)
 
 uart_dev_t   uart_0;
+uart_dev_t   uart_1;
 
 #define OS_WAIT_FOREVER		0xffffffffU
 
@@ -95,7 +96,7 @@ GETCHAR_PROTOTYPE
 
 static int __dbg_fputc (const char c, void *fil)
 {
-    bl_uart_data_send(0, c);
+    bl_uart_data_send(1, c);
     return 1;
 }
 
@@ -124,5 +125,13 @@ void uart0_rbuf_init(uint32_t baud_rate)
     uart_0.config.baud_rate = baud_rate;
     uart_0.priv = pins;
     hal_uart_init(&uart_0);
+
+    uint8_t my_pins[] = {21, 12};
+    uart_1.port = 1;
+    uart_1.config.baud_rate = 921600;
+    uart_1.priv = my_pins;
+
+    hal_uart_init(&uart_1);
+    
 }
 

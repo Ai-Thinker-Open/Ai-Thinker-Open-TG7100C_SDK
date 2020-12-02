@@ -539,14 +539,14 @@ int puts(const char *s)// only for ali
 
     while ('\0' != (c = *(s++))) {
         if (0x0a == c) {
-            bl_uart_data_send(0, 0x0d);
+            bl_uart_data_send(1, 0x0d);
         }
-        bl_uart_data_send(0, c);
+        bl_uart_data_send(1, c);
         counter++;
     }
 
-    bl_uart_data_send(0, 0x0d);
-    bl_uart_data_send(0, 0x0a);
+    bl_uart_data_send(1, 0x0d);
+    bl_uart_data_send(1, 0x0a);
     counter++;
     return counter;
 }

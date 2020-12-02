@@ -728,7 +728,7 @@ int netmgr_init(void)
     hal_wifi_module_t *module;
 
     aos_register_event_filter(EV_WIFI, netmgr_events_executor, NULL);
-    aos_cli_register_command(&ncmd);
+    // aos_cli_register_command(&ncmd);
 
     module = hal_wifi_get_default_module();
     memset(&g_netmgr_cxt, 0, sizeof(g_netmgr_cxt));

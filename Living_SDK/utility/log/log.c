@@ -158,7 +158,7 @@ struct cli_command log_cli_cmd[] = {
 void log_cli_init(void)
 {
     aos_log_level = AOS_LL_V_DEBUG | AOS_LL_V_INFO | AOS_LL_V_WARN | AOS_LL_V_ERROR | AOS_LL_V_FATAL;
-    aos_cli_register_commands(&log_cli_cmd[0], sizeof(log_cli_cmd) / sizeof(struct cli_command));
+    // aos_cli_register_commands(&log_cli_cmd[0], sizeof(log_cli_cmd) / sizeof(struct cli_command));
     aos_mutex_new(&log_mutex);
 }
 

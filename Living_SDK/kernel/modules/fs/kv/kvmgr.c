@@ -1174,7 +1174,7 @@ int aos_kv_init(void)
     }
 
 #ifdef CONFIG_AOS_CLI
-    aos_cli_register_command(&ncmd);
+    // aos_cli_register_command(&ncmd);
 #endif
 
     if ((ret = kv_init()) != RES_OK)
