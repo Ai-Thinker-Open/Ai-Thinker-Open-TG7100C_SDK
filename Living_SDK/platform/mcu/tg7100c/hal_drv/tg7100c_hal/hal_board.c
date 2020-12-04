@@ -106,56 +106,58 @@ static void update_mac_config_with_order(const void *fdt, int offset1, const cha
     uint8_t mac_addr[6];
     static const uint8_t mac_default[] = {0x18, 0xB9, 0x05, 0x88, 0x88, 0x88};
 
-    set = 0;
-    len = strlen(order);
-    for (i = 0; i < MAC_ORDER_ADDR_LEN_MAX && i < len; i++) {
-        switch (order[i]) {
-            case 'B':
-            {
-                if (0 == update_mac_config_get_mac_from_efuse(mac_addr)) {
-                    set = 1;
-                    blog_debug("get MAC from B ready\r\n");
-                    goto break_scan;
-                } else {
-                    blog_debug("get MAC from B failed\r\n");
-                }
-            }
-            break;
-            case 'F':
-            {
-                if (0 == update_mac_config_get_mac_from_dtb(fdt, offset1, mac_addr)) {
-                    set = 1;
-                    blog_debug("get MAC from F ready\r\n");
-                    goto break_scan;
-                } else {
-                    blog_debug("get MAC from F failed\r\n");
-                }
-            }
-            break;
-            case 'M':
-            {
-                if (0 == update_mac_config_get_mac_from_factory(mac_addr)) {
-                    set = 1;
-                    blog_debug("get MAC from M ready\r\n");
-                    goto break_scan;
-                } else {
-                    blog_debug("get MAC from M failed\r\n");
-                }
-            }
-            break;
-            default:
-            {
-                BL_ASSERT(0);
-            }
-        }
-    }
-break_scan:
-    if (0 == set) {
-        blog_info("Using Default MAC address\r\n");
-        memcpy(mac_addr, mac_default, 6);
-    }
+//     set = 0;
+//     len = strlen(order);
+//     for (i = 0; i < MAC_ORDER_ADDR_LEN_MAX && i < len; i++) {
+//         switch (order[i]) {
+//             case 'B':
+//             {
+//                 if (0 == update_mac_config_get_mac_from_efuse(mac_addr)) {
+//                     set = 1;
+//                     blog_debug("get MAC from B ready\r\n");
+//                     goto break_scan;
+//                 } else {
+//                     blog_debug("get MAC from B failed\r\n");
+//                 }
+//             }
+//             break;
+//             case 'F':
+//             {
+//                 if (0 == update_mac_config_get_mac_from_dtb(fdt, offset1, mac_addr)) {
+//                     set = 1;
+//                     blog_debug("get MAC from F ready\r\n");
+//                     goto break_scan;
+//                 } else {
+//                     blog_debug("get MAC from F failed\r\n");
+//                 }
+//             }
+//             break;
+//             case 'M':
+//             {
+//                 if (0 == update_mac_config_get_mac_from_factory(mac_addr)) {
+//                     set = 1;
+//                     blog_debug("get MAC from M ready\r\n");
+//                     goto break_scan;
+//                 } else {
+//                     blog_debug("get MAC from M failed\r\n");
+//                 }
+//             }
+//             break;
+//             default:
+//             {
+//                 BL_ASSERT(0);
+//             }
+//         }
+//     }
+// break_scan:
+//     if (0 == set) {
+//         blog_info("Using Default MAC address\r\n");
+//         memcpy(mac_addr, mac_default, 6);
+//     }
     //FIXME maybe we should set a different MAC address
-#if 0
+    blog_info("Using Default MAC address\r\n");
+    bl_flash_efuse_read_mac(mac_addr);
+#if 1
     blog_info("Set MAC addrress %02X:%02X:%02X:%02X:%02X:%02X\r\n",
             mac_addr[0],
             mac_addr[1],
