@@ -1,8 +1,0 @@
-[submodule "Products/Smart_lighting/smart_led_bulb"]
-	path = Products/Smart_lighting/smart_led_bulb
-	url = git@gitlab.alibaba-inc.com:products_for_smart_living/smart_led_bulb.git
-	branch = slb_1.7.3
-[submodule "Products/Smart_outlet/smart_outlet_meter"]
-	path = Products/Smart_outlet/smart_outlet_meter
-	url = git@gitlab.alibaba-inc.com:products_for_smart_living/smart_outlet_with_meter.git
-	branch = smm_1.6.5
