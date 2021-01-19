@@ -19,47 +19,56 @@
 #include "device_state_manger.h"
 #include "iot_import_awss.h"
 #include "smart_outlet.h"
+
+//三元组KEY值
+#define KV_KEY_PK "product_key"
+#define KV_KEY_PS "product_secret"
+#define KV_KEY_DN "device_name"
+#define KV_KEY_DS "device_secret"
+#define KV_KEY_PD "product_id"
+#define MAX_KEY_LEN (6)
+
 #if defined(HF_LPT230) || defined(HF_LPT130)
 #include "hfilop/hfilop.h"
 #endif
 
 #if defined(HF_LPT130) /* config for PRODUCT: zuowei outlet */
-#define LED_GPIO    22
-#define RELAY_GPIO  5
-#define KEY_GPIO    4
+#define LED_GPIO 22
+#define RELAY_GPIO 5
+#define KEY_GPIO 4
 #elif defined(HF_LPT230) || defined(UNO_91H) /* on hf-lpt230 EVB */
-#define LED_GPIO    8
-#define RELAY_GPIO  24
-#define KEY_GPIO    25
+#define LED_GPIO 8
+#define RELAY_GPIO 24
+#define KEY_GPIO 25
 #elif defined(MK3080) /* on mk3080 EVB */
-#define LED_GPIO    9
-#define RELAY_GPIO  7
-#define KEY_GPIO    12
+#define LED_GPIO 9
+#define RELAY_GPIO 7
+#define KEY_GPIO 12
 #elif defined(MX1270) /* on mx1270 EVB  */
-#define LED_GPIO    11
-#define RELAY_GPIO  6
-#define KEY_GPIO    8
+#define LED_GPIO 11
+#define RELAY_GPIO 6
+#define KEY_GPIO 8
 #elif defined(BK7231UDEVKITC)
-#define LED_GPIO    15
-#define RELAY_GPIO  17
-#define KEY_GPIO    28
+#define LED_GPIO 15
+#define RELAY_GPIO 17
+#define KEY_GPIO 28
 #elif defined(AMEBAZ_DEV) /* on amebaz_dev */
-#define LED_GPIO    9
-#define RELAY_GPIO  7
-#define KEY_GPIO    12
-#elif (defined (TG7100CEVB))
-#define LED_GPIO    1
-#define RELAY_GPIO  5
-#define KEY_GPIO    3
+#define LED_GPIO 9
+#define RELAY_GPIO 7
+#define KEY_GPIO 12
+#elif (defined(TG7100CEVB))
+#define LED_GPIO 5
+#define RELAY_GPIO 22
+#define KEY_GPIO 8
 char *p_product_key = NULL;
 char *p_product_secret = NULL;
 char *p_device_name = NULL;
 char *p_device_secret = NULL;
 char *productidStr = NULL;
 #else /* default config  */
-#define LED_GPIO    22
-#define RELAY_GPIO  5
-#define KEY_GPIO    4
+#define LED_GPIO 22
+#define RELAY_GPIO 5
+#define KEY_GPIO 4
 #endif
 
 static gpio_dev_t io_led;
@@ -69,20 +78,27 @@ static gpio_dev_t io_relay;
 static int led_state = -1;
 void product_set_led(bool state)
 {
-    if (led_state == (int)state) {
+    if (led_state == (int)state)
+    {
         return;
     }
 
 #if defined(TG7100CEVB) || defined(HF_LPT130) || defined(UNO_91H)
-    if (state) {
+    if (state)
+    {
         hal_gpio_output_high(&io_led);
-    } else {
+    }
+    else
+    {
         hal_gpio_output_low(&io_led);
     }
 #else
-    if (state) {
+    if (state)
+    {
         hal_gpio_output_low(&io_led);
-    } else {
+    }
+    else
+    {
         hal_gpio_output_high(&io_led);
     }
 #endif
@@ -96,9 +112,12 @@ static bool product_get_led()
 
 void product_toggle_led()
 {
-    if (product_get_led() == ON) {
+    if (product_get_led() == ON)
+    {
         product_set_led(OFF);
-    } else {
+    }
+    else
+    {
         product_set_led(ON);
     }
 }
@@ -120,9 +139,12 @@ void product_init_switch(void)
 #else
     state == ON;
 #endif
-    if (state == OFF) {
+    if (state == OFF)
+    {
         product_set_switch(OFF);
-    } else {
+    }
+    else
+    {
         product_set_switch(ON);
     }
 }
@@ -137,10 +159,12 @@ static void timer_period_save_device_status_cb(void *arg1, void *arg2)
 
     ret = aos_kv_get(KV_KEY_SWITCH_STATE, (void *)&state, &len);
 
-   if(ret != 0 || state != switch_state) {
-        LOG("KV DEVICE_STATUS Update!!!,ret=%d.\n",ret);
+    if (ret != 0 || state != switch_state)
+    {
+        LOG("KV DEVICE_STATUS Update!!!,ret=%d.\n", ret);
         ret = aos_kv_set(KV_KEY_SWITCH_STATE, &switch_state, len, 0);
-        if (ret < 0) LOG("KV set Error: %d\r\n", __LINE__);
+        if (ret < 0)
+            LOG("KV set Error: %d\r\n", __LINE__);
     }
 }
 #endif
@@ -170,20 +194,27 @@ void product_set_switch(bool state)
     int ret = 0;
 
     //LOG("product_set_switch, state:%d, switch_state:%d", state, switch_state);
-    if (switch_state == (int)state) {
+    if (switch_state == (int)state)
+    {
         return;
     }
 
 #if defined(TG7100CEVB) || defined(HF_LPT130) || defined(UNO_91H)
-    if (state) {
+    if (state)
+    {
         hal_gpio_output_high(&io_relay);
-    } else {
+    }
+    else
+    {
         hal_gpio_output_low(&io_relay);
     }
 #else
-    if (state) {
+    if (state)
+    {
         hal_gpio_output_low(&io_relay);
-    } else {
+    }
+    else
+    {
         hal_gpio_output_high(&io_relay);
     }
 #endif
@@ -211,9 +242,10 @@ int vendor_get_product_key(char *product_key, int *len)
     int ret = -1;
     int pk_len = *len;
 
-    ret = aos_kv_get("linkkit_product_key", product_key, &pk_len);
+    ret = aos_kv_get(KV_KEY_PK, product_key, &pk_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
-    if ((ret != 0)&&((pk = hfilop_layer_get_product_key()) != NULL)) {
+    if ((ret != 0) && ((pk = hfilop_layer_get_product_key()) != NULL))
+    {
         pk_len = strlen(pk);
         memcpy(product_key, pk, pk_len);
         ret = 0;
@@ -223,11 +255,13 @@ int vendor_get_product_key(char *product_key, int *len)
         todo: get pk...
     */
 #endif
-    if (ret == 0) {
+    if (ret == 0)
+    {
         *len = pk_len;
     }
-#if (defined (TG7100CEVB))
-    if(p_product_key != NULL && strlen(p_product_key) > 0){
+#if (defined(TG7100CEVB))
+    if (p_product_key != NULL && strlen(p_product_key) > 0)
+    {
         pk_len = strlen(p_product_key);
         memcpy(product_key, p_product_key, pk_len);
         *len = pk_len;
@@ -243,9 +277,10 @@ int vendor_get_product_secret(char *product_secret, int *len)
     int ret = -1;
     int ps_len = *len;
 
-    ret = aos_kv_get("linkkit_product_secret", product_secret, &ps_len);
+    ret = aos_kv_get(KV_KEY_PS, product_secret, &ps_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
-    if ((ret != 0)&&((ps = hfilop_layer_get_product_secret()) != NULL)) {
+    if ((ret != 0) && ((ps = hfilop_layer_get_product_secret()) != NULL))
+    {
         ps_len = strlen(ps);
         memcpy(product_secret, ps, ps_len);
         ret = 0;
@@ -255,11 +290,13 @@ int vendor_get_product_secret(char *product_secret, int *len)
         todo: get ps...
     */
 #endif
-    if (ret == 0) {
+    if (ret == 0)
+    {
         *len = ps_len;
     }
-#if (defined (TG7100CEVB))
-    if(p_product_secret != NULL && strlen(p_product_secret) > 0){
+#if (defined(TG7100CEVB))
+    if (p_product_secret != NULL && strlen(p_product_secret) > 0)
+    {
         ps_len = strlen(p_product_secret);
         memcpy(product_secret, p_product_secret, ps_len);
         *len = ps_len;
@@ -275,9 +312,10 @@ int vendor_get_device_name(char *device_name, int *len)
     int ret = -1;
     int dn_len = *len;
 
-    ret = aos_kv_get("linkkit_device_name", device_name, &dn_len);
+    ret = aos_kv_get(KV_KEY_DN, device_name, &dn_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
-    if ((ret != 0)&&((dn = hfilop_layer_get_device_name()) != NULL)) {
+    if ((ret != 0) && ((dn = hfilop_layer_get_device_name()) != NULL))
+    {
         dn_len = strlen(dn);
         memcpy(device_name, dn, dn_len);
         ret = 0;
@@ -287,11 +325,13 @@ int vendor_get_device_name(char *device_name, int *len)
         todo: get dn...
     */
 #endif
-    if (ret == 0) {
+    if (ret == 0)
+    {
         *len = dn_len;
     }
-#if (defined (TG7100CEVB))
-    if(p_device_name != NULL && strlen(p_device_name) > 0){
+#if (defined(TG7100CEVB))
+    if (p_device_name != NULL && strlen(p_device_name) > 0)
+    {
         dn_len = strlen(p_device_name);
         memcpy(device_name, p_device_name, dn_len);
         *len = dn_len;
@@ -307,9 +347,10 @@ int vendor_get_device_secret(char *device_secret, int *len)
     int ret = -1;
     int ds_len = *len;
 
-    ret = aos_kv_get("linkkit_device_secret", device_secret, &ds_len);
+    ret = aos_kv_get(KV_KEY_DS, device_secret, &ds_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
-    if ((ret != 0)&&((ds = hfilop_layer_get_device_secret()) != NULL)) {
+    if ((ret != 0) && ((ds = hfilop_layer_get_device_secret()) != NULL))
+    {
         ds_len = strlen(ds);
         memcpy(device_secret, ds, ds_len);
         ret = 0;
@@ -319,11 +360,13 @@ int vendor_get_device_secret(char *device_secret, int *len)
         todo: get ds...
     */
 #endif
-    if (ret == 0) {
+    if (ret == 0)
+    {
         *len = ds_len;
     }
-#if (defined (TG7100CEVB))
-    if(p_device_secret != NULL && strlen(p_device_secret) > 0){
+#if (defined(TG7100CEVB))
+    if (p_device_secret != NULL && strlen(p_device_secret) > 0)
+    {
         ds_len = strlen(p_device_secret);
         memcpy(device_secret, p_device_secret, ds_len);
         *len = ds_len;
@@ -336,17 +379,21 @@ int vendor_get_device_secret(char *device_secret, int *len)
 int vendor_get_product_id(uint32_t *pid)
 {
     int ret = -1;
-    char pidStr[9] = { 0 };
+    char pidStr[9] = {0};
     int len = sizeof(pidStr);
 
-    ret = aos_kv_get("linkkit_product_id", pidStr, &len);
-    if (ret == 0 && len < sizeof(pidStr)) {
+    ret = aos_kv_get(KV_KEY_PD, pidStr, &len);
+    if (ret == 0 && len < sizeof(pidStr))
+    {
         *pid = atoi(pidStr);
-    } else {
+    }
+    else
+    {
         ret = -1;
     }
-#if (defined (TG7100CEVB))
-    if(productidStr != NULL && strlen(productidStr) > 6){
+#if (defined(TG7100CEVB))
+    if (productidStr != NULL && strlen(productidStr) > 6)
+    {
         *pid = atoi(productidStr);
         // LOG("pid[%d]", *pid);
         return 0;
@@ -380,28 +427,37 @@ int set_device_meta_info(void)
     len = DEVICE_SECRET_LEN + 1;
     vendor_get_device_secret(device_secret, &len);
 
-    if ((strlen(product_key) > 0) && (strlen(product_secret) > 0) \
-            && (strlen(device_name) > 0) && (strlen(device_secret) > 0)) {
+    if ((strlen(product_key) > 0) && (strlen(product_secret) > 0) && (strlen(device_name) > 0) && (strlen(device_secret) > 0))
+    {
         HAL_SetProductKey(product_key);
         HAL_SetProductSecret(product_secret);
         HAL_SetDeviceName(device_name);
         HAL_SetDeviceSecret(device_secret);
-        LOG("pk[%s]", product_key);
-        LOG("dn[%s]", device_name);
+     
+        LOG("product_key[%s]", product_key);
+        LOG("device_name[%s]", device_name);
+        LOG("product_secret[%s]", product_secret);
+        LOG("device_secret[%s]", device_secret);
+
         return 0;
-    } else {
-#if (defined (TG7100CEVB))
+    }
+    else
+    {
+#if (defined(TG7100CEVB))
         /* check media valid, and update p */
         int res = ali_factory_media_get(
-                    &p_product_key,
-                    &p_product_secret,
-                    &p_device_name,
-                    &p_device_secret,
-                    &productidStr);
-        if (0 != res) {
+            &p_product_key,
+            &p_product_secret,
+            &p_device_name,
+            &p_device_secret,
+            &productidStr);
+        if (0 != res)
+        {
             printf("ali_factory_media_get res = %d\r\n", res);
             return -1;
-        } else {
+        }
+        else
+        {
             HAL_SetProductKey(p_product_key);
             HAL_SetProductSecret(p_product_secret);
             HAL_SetDeviceName(p_device_name);
