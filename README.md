@@ -29,23 +29,23 @@ asr5502: 	mx1270
 
 获取productKey：
 
-    `aos_kv_get(KV_KEY_PK, product_key, &pk_len);` 
+    aos_kv_get(KV_KEY_PK, product_key, &pk_len);
 
 获取ProduceSecret：
 
-    `aos_kv_get(KV_KEY_PS, product_secret, &ps_len);`
+    aos_kv_get(KV_KEY_PS, product_secret, &ps_len);
 
 获取DeviceName：
 
-    `aos_kv_get(KV_KEY_DN, device_name, &dn_len);`
+    aos_kv_get(KV_KEY_DN, device_name, &dn_len);
 
 获取DeviceSecret:
 
-    `aos_kv_get(KV_KEY_DS, device_secret, &ds_len);`
+    aos_kv_get(KV_KEY_DS, device_secret, &ds_len);
 
 获取ProductID：
 
-    `aos_kv_get(KV_KEY_PD, pidStr, &len);`
+    aos_kv_get(KV_KEY_PD, pidStr, &len);
 
 安信可烧录三元组AT指令格式：
 
