@@ -1,0 +1,7 @@
+#ifndef __CT_CONFIG_H__
+#define __CT_CONFIG_H__
+
+//#define CT_DOWNLOAD_OTA_WHEN_CONNECT_CLOUD
+//#define CT_PRODUCT_DYNAMIC_REGISTER_AND_USE_RAWDATA
+
+#endif

@@ -1,0 +1,80 @@
+
+## 第一部分： 基础信息
+name: drv_wifi_tg7100c                                         # <必选项> 包名称 （符合C语言变量命名规则），长度少于等于64字节
+version: v7.3.0                                     # <必选项> 组件版本号
+description: tg7100c wifi stack. # <必选项> 建议至少20字以上
+type: common                                         # <必选项> 组件类型，为：solution, chip, board, common
+
+tag: 核心模块                                       # <可选项> 组件分类，缺省值： ''
+license: Apache license v2.0                        # <可选项> 源代码的许可证，要确保所有代码、文件的许可证不冲突。如：MIT，Apache license v2.0，BSD
+
+board:
+  vendor_name: wifi
+  chip_name: chip_tg7100c
+  cpu_name: e906f
+  ld_script: configs/gcc_eflash.ld
+  
+depends:
+  - firmware: V7.3.0
+  
+build_config:
+  cflag: >
+    -march=rv32imafc -mabi=ilp32f -g -Os
+    -nostdlib -Wpointer-arith -Wundef -Wall -Wl,-EL -ffunction-sections
+    -fdata-sections -fno-inline-functions -fno-builtin -fno-strict-aliasing
+    -fno-strength-reduce -fno-omit-frame-pointer -std=gnu11
+    -DCONFIG_TG7100C=1
+    -DARCH_RISCV
+  ldflag: >
+    -march=rv32imafc -mabi=ilp32f
+    -Wl,--cref -Wl,--gc-sections
+    -nostartfiles -u _printf_float
+  define:
+    CFG_STA_MAX: 2
+    CFG_TXDESC: 2
+    CFG_WIFI_DEBUG: 0
+    WIFI_MGMR_TASK_SIZE_BYTES: 2048
+    BL_CHIP_NAME: "tg7100c"
+
+  include:
+    - tg7100c_wifi_driver/include
+    - tg7100c_wifi_driver
+    - os_port/aos
+    - inc/yoc
+    - firmware/include
+    - .
+#   libs:                                  # 该组件中支持的二进制静态库,如：libxxx.a, libyyy.a
+#     - firmware                                #   -lxxx
+#   libpath:                               # 指定静态库所在的路径（相对于该组件路径）
+#     - firmware/lib                               #   -Llibs
+source_file: 
+  - "tg7100c_wifi_driver/ipc_host.c"
+  - "tg7100c_wifi_driver/bl_apis.c"
+  - "os_port/aos/os_hal.c"
+  - "tg7100c_wifi_driver/bl_apis.c"
+  - "tg7100c_wifi_driver/bl_cmds.c"
+  - "tg7100c_wifi_driver/bl_irqs.c"
+  - "tg7100c_wifi_driver/bl_main.c"
+  - "tg7100c_wifi_driver/bl_mod_params.c"
+  - "tg7100c_wifi_driver/bl_msg_rx.c"
+  - "tg7100c_wifi_driver/bl_msg_tx.c"
+  - "tg7100c_wifi_driver/bl_platform.c"
+  - "tg7100c_wifi_driver/bl_rx.c"
+  - "tg7100c_wifi_driver/bl_strs.c"
+  - "tg7100c_wifi_driver/bl_tx.c"
+  - "tg7100c_wifi_driver/bl_utils.c"
+  - "tg7100c_wifi_driver/stateMachine.c"
+  - "tg7100c_wifi_driver/wifi.c"
+  - "tg7100c_wifi_driver/wifi_mgmr.c"
+  - "tg7100c_wifi_driver/wifi_mgmr_api.c"
+  - "tg7100c_wifi_driver/wifi_mgmr_ext.c"
+  - "tg7100c_wifi_driver/wifi_mgmr_profile.c"
+  - "tg7100c_wifi_driver/wifi_netif.c"
+  - "tg7100c_wifi_driver/wifi_mgmr_event.c"
+  - "tg7100c_wifi_driver/wifi_mgmr_cli.c"
+
+install:
+  - dest: "tg7100c_wifi_driver/include"
+    source:
+      - "tg7100c_wifi_driver/include/*.h"
+

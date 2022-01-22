@@ -1,0 +1,32 @@
+
+config MQTT_COMM_ENABLED
+    bool "FEATURE_MQTT_COMM_ENABLED"
+    default y
+    help
+        Establish persistent connection with AliCloud via MQTT-based protocol
+
+        Switching to "y" leads to building MQTT related implementation into SDK and MQTT_COMM_ENABLED included into CFLAGS
+        Switching to "n" seldom happens unless you're connecting to AliCloud via CoAP/HTTP channel
+
+menu "MQTT Configurations"
+    depends on MQTT_COMM_ENABLED
+
+    config MQTT_AUTO_SUBSCRIBE
+	bool "FEATURE_MQTT_AUTO_SUBSCRIBE"
+	default y
+	help
+	    Enable the cloud smart subscribe function,save a lot of time and cloud communications.
+
+    config MQTT_SHADOW
+        bool "FEATURE_MQTT_SHADOW"
+        default n
+        help
+            Enable providing cache data of IoT device at cloud via "IOT_Shadow_XXX" APIs declared in include/exports/iot_export_shadow.h
+
+    config MQTT_LOGPOST
+        bool "FEATURE_MQTT_LOGPOST"
+        default n
+        help
+            Enable capability of publishing important device running log messages to IoT cloud
+
+endmenu

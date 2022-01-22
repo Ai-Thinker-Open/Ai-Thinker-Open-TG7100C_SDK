@@ -1,0 +1,1 @@
+# TG7100C Chip wifi firmware

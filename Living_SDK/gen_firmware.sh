@@ -1,0 +1,1 @@
+example/smart_led_strip/gen_firmware.sh

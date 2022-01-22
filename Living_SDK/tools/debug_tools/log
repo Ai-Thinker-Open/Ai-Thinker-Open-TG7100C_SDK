@@ -1,0 +1,123 @@
+
+    msg->validindex = INVALID;
+rt]:Post Property Message ID: 47 Payload {"ColorTemperature":{"value":6601,"time":1581595493659}}
+[led][main]:property set,  Devid: 0, payload: "{"ColorTemperature":3105}"
+[led][msg]:===============aos_queue_recved: cmd msg.validindex=4============.
+
+[led][report]:Post Property Message ID: 48 Payload {"ColorTemperature":{"value":3105,"time":1581595494573}}
+[led][main]:property set,  Devid: 0, payload: "{"LocalTimer":[{"LightSwitch":0,"Timer":"56 19 * * *","Enable":1,"IsValid":1},{"LightSwitch":1,"Timer":"57 19 * * *","Enable":1,"IsValid":1},{"LightSwitch":0,"Timer":"2 20 * * *","Enable":0,"IsValid":1},{"LightSwitch":0,"Timer":"8 20 * * *","Enable":1,"IsValid":1},{"LightSwitch":0,"Timer":"","Enable":1,"IsValid":0}]}"
+tbtt_time past:248034528 248046439 102400
+!!!!!!!!!! Exception  !!!!!!!!!!
+========== Regs info  ==========
+R0      0xDEADDEAD
+R1      0x00000000
+R2      0x0800F3F0
+R3      0xDEADDEAD
+R4      0x0800F3F0
+R5      0x08010630
+R6      0x00000001
+R7      0x0000000C
+R8      0x00000000
+R9      0x09090909
+R10     0x10101010
+R11     0x11111111
+R12     0x00000000
+LR      0x1004A0E3
+PC      0xDEADDEAC
+xPSR    0x41010000
+SP      0x08012290
+EXC_RET 0xFFFFFFED
+EXC_NUM 0x00000003
+PRIMASK 0x00000000
+FLTMASK 0x00000000
+BASEPRI 0x00000000
+CFSR    0x00000001
+HFSR    0x40000000
+MMFAR   0xE000ED34
+BFAR    0xE000ED38
+AFSR    0x00000000
+========== Stack info ==========
+stack(0x08012290): 0x08002438 0x05050505 0x06060606 0x07070707 
+stack(0x080122A0): 0x08080808 0x1000C745 0x00000800 0x0000001F 
+stack(0x080122B0): 0x5A353261 0x50596F68 0x00415738 0x00000000 
+stack(0x080122C0): 0x00000000 0x1007EA00 0x676E6964 0x67696C5F 
+stack(0x080122D0): 0x00007468 0x00000000 0x00000000 0x00000000 
+stack(0x080122E0): 0x00000000 0x00000000 0x08000E00 0x4B536432 
+stack(0x080122F0): 0x685A3367 0x35585341 0x35313944 0x42704630 
+stack(0x08012300): 0x576E4458 0x54634A55 0x486F6A6A 0x00000000 
+stack(0x08012310): 0x00000000 0x00000000 0x00000000 0x00000000 
+stack(0x08012320): 0x00000000 0x00000000 0x00000000 0x05050500 
+stack(0x08012330): 0x0800038C 0x10013F6F 0x04040404 0x10036991 
+stack(0x08012340): 0xFEFEFEFE 0x100364BD 0x08011330 0x00000070 
+stack(0x08012350): 0x080120BC 0x1008D815 0x0800F3F0 0x0800F750 
+stack(0x08012360): 0x08011340 0x00000400 0x0801B3B8 0x0801D670 
+stack(0x08012370): 0x00000000 0x00000000 0x08013630 0x08005338 
+stack(0x08012380): 0x080052A8 0x08005340 0x00056D2A 0x00000000 
+========== Call stack ==========
+backtrace : 0xDEADDEAC 
+backtrace : 0x1004A0E0 
+backtrace : 0x1000C740 
+backtrace : 0x10013F6A 
+backtrace : ^task entry^
+========== Heap Info  ==========
+-----------------------------------------------------------
+[HEAP]| TotalSz    | FreeSz     | UsedSz     | MinFreeSz  |
+      | 0x00026DC0 | 0x0000EC90 | 0x00018130 | 0x0000D808 |
+-----------------------------------------------------------
+[POOL]| PoolSz     | FreeSz     | UsedSz     | BlkSz      |
+      | 0x00002000 | 0x00000CC0 | 0x00001340 | 0x00000020 |
+-----------------------------------------------------------
+========== Task Info  ==========
+--------------------------------------------------------------------------
+TaskName             State    Prio       Stack      StackSize (MinFree)
+--------------------------------------------------------------------------
+dyn_mem_proc_task    PEND     0x00000006 0x08004B90 0x00000200(0x00000168)
+idle_task            RDY      0x0000003D 0x08004E0C 0x00000320(0x000002C4)
+timer_task           PEND     0x00000005 0x08005380 0x00000800(0x00000624)
+main_task            RDY      0x00000020 0x08011340 0x00001000(0x000008DC)
+tcpip_thread         RDY      0x00000004 0x08012DF8 0x00000800(0x000004C4)
+UWIFI_TASK           PEND     0x00000014 0x08013930 0x00001C00(0x00000CAC)
+LWIFI_TASK           RDY      0x00000011 0x08015B88 0x00000800(0x000004AC)
+UWIFI_RX_TASK        PEND     0x0000000F 0x08017D28 0x00001000(0x00000CE4)
+cli                  PEND     0x00000021 0x08019158 0x00001000(0x00000C24)
+device state mng     PEND     0x00000020 0x0801C878 0x00000400(0x00000348)
+cmd msg process      PEND     0x0000001F 0x0801CD08 0x00000800(0x00000430)
+linkkit              RDY      0x00000020 0x0801DD30 0x00002000(0x00000CC4)
+CoAPServer_yield     RDY      0x00000020 0x0801FD40 0x00001200(0x00000EB0)
+cm_yield             PEND     0x00000020 0x08026770 0x00001800(0x00001164)
+========== Queue Info ==========
+-------------------------------------------------------
+QueAddr    TotalSize  PeakNum    CurrNum    TaskWaiting
+-------------------------------------------------------
+======== Buf Queue Info ========
+------------------------------------------------------------------
+BufQueAddr TotalSize  PeakNum    CurrNum    MinFreeSz  TaskWaiting
+------------------------------------------------------------------
+0x08005B80 0x000001E0 0x00000004 0x00000000 0x00000180 timer_task          
+0x08012430 0x00000280 0x00000000 0x00000000 0x00000280 cli                 
+0x08012C98 0x000000F0 0x00000000 0x00000000 0x000000F0                     
+0x08013790 0x00000190 0x00000002 0x00000000 0x0000016E UWIFI_TASK          
+0x080156C8 0x000004B0 0x0000000B 0x00000001 0x0000048F                     
+0x08017AC0 0x00000258 0x00000000 0x00000000 0x00000258 UWIFI_RX_TASK       
+0x0801BC20 0x00000870 0x00000000 0x00000000 0x00000870 cmd msg process     
+0x0801C4A0 0x000002D0 0x00000002 0x00000000 0x0000023E                     
+0x0801C7E0 0x00000028 0x00000001 0x00000000 0x00000023 device state mng    
+0x0801B018 0x00000050 0x00000000 0x00000000 0x00000050                     
+0x080219C8 0x00000028 0x00000003 0x00000000 0x00000019                     
+=========== Sem Info ===========
+--------------------------------------------
+SemAddr    Count      PeakCount  TaskWaiting
+--------------------------------------------
+0x08005274 0x00000000 0x00000000 dyn_mem_proc_task   
+0x08013688 0x00000000 0x00000000                     
+0x080136C0 0x00000000 0x00000000                     
+0x0801A258 0x00000000 0x00000000                     
+0x0801DBE8 0x00000000 0x00000001                     
+0x0801DCF8 0x00000001 0x00000005                     
+0x0801DC70 0x00000000 0x00000001                     
+0x0801A868 0x00000000 0x00000000                     
+0x0801B0D8 0x00000000 0x00000001                     
+0x0801B340 0x00000000 0x00000000                     
+0x08025B08 0x00000000 0x00000001                     
+!!!!!!!!!! dump end   !!!!!!!!!!
+
