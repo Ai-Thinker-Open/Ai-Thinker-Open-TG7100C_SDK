@@ -31,6 +31,8 @@ function files_cp()
 	cp Living_SDK/platform/mcu/tg7100c/gcc/flash_rom.ld prebuild/lib/
 	rm -f prebuild/lib/$2.a
 
+	cp -rfa Living_SDK/platform/mcu/tg7100c/hal_drv/tg7100c_hal/*.h prebuild/include
+
 	cp -rfa Living_SDK/include/* prebuild/include
 	cp -rfa Living_SDK/utility/cjson/include/* prebuild/include
 	cp -rfa Living_SDK/framework/uOTA/inc/ota_service.h prebuild/include

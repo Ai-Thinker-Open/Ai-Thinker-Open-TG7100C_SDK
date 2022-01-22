@@ -19,6 +19,7 @@
 #include "device_state_manger.h"
 #include "iot_import_awss.h"
 #include "smart_outlet.h"
+#include "bl_flash.h"
 #if defined(HF_LPT230) || defined(HF_LPT130)
 #include "hfilop/hfilop.h"
 #endif
@@ -211,7 +212,7 @@ int vendor_get_product_key(char *product_key, int *len)
     int ret = -1;
     int pk_len = *len;
 
-    ret = aos_kv_get("linkkit_product_key", product_key, &pk_len);
+    ret = aos_kv_get(KV_KEY_PK, product_key, &pk_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
     if ((ret != 0)&&((pk = hfilop_layer_get_product_key()) != NULL)) {
         pk_len = strlen(pk);
@@ -243,7 +244,7 @@ int vendor_get_product_secret(char *product_secret, int *len)
     int ret = -1;
     int ps_len = *len;
 
-    ret = aos_kv_get("linkkit_product_secret", product_secret, &ps_len);
+    ret = aos_kv_get(KV_KEY_PS, product_secret, &ps_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
     if ((ret != 0)&&((ps = hfilop_layer_get_product_secret()) != NULL)) {
         ps_len = strlen(ps);
@@ -275,7 +276,7 @@ int vendor_get_device_name(char *device_name, int *len)
     int ret = -1;
     int dn_len = *len;
 
-    ret = aos_kv_get("linkkit_device_name", device_name, &dn_len);
+    ret = aos_kv_get(KV_KEY_DN, device_name, &dn_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
     if ((ret != 0)&&((dn = hfilop_layer_get_device_name()) != NULL)) {
         dn_len = strlen(dn);
@@ -307,7 +308,7 @@ int vendor_get_device_secret(char *device_secret, int *len)
     int ret = -1;
     int ds_len = *len;
 
-    ret = aos_kv_get("linkkit_device_secret", device_secret, &ds_len);
+    ret = aos_kv_get(KV_KEY_DS, device_secret, &ds_len);
 #if defined(HF_LPT230) || defined(HF_LPT130)
     if ((ret != 0)&&((ds = hfilop_layer_get_device_secret()) != NULL)) {
         ds_len = strlen(ds);
@@ -339,7 +340,7 @@ int vendor_get_product_id(uint32_t *pid)
     char pidStr[9] = { 0 };
     int len = sizeof(pidStr);
 
-    ret = aos_kv_get("linkkit_product_id", pidStr, &len);
+    ret = aos_kv_get(KV_KEY_PD, pidStr, &len);
     if (ret == 0 && len < sizeof(pidStr)) {
         *pid = atoi(pidStr);
     } else {

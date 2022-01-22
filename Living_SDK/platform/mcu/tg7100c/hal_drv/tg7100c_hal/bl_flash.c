@@ -412,3 +412,53 @@ int bl_flash_read_byxip(uint32_t addr, uint8_t *dst, int len)
     return 0;
 }
 
+
+#include <aos/aos.h>
+#include "iot_export.h"
+//设置三元组到flash
+void handle_set_linkkey_cmd(char *pwbuf, int blen, int argc, char **argv)
+{
+    if (argc == 5 || argc == 6) {
+        aos_kv_set(KV_KEY_PK, argv[1], strlen(argv[1]) + 1, 1);
+        aos_kv_set(KV_KEY_DN, argv[2], strlen(argv[2]) + 1, 1);
+        aos_kv_set(KV_KEY_DS, argv[3], strlen(argv[3]) + 1, 1);
+        aos_kv_set(KV_KEY_PS, argv[4], strlen(argv[4]) + 1, 1);
+        if (argc == 6)
+            aos_kv_set(KV_KEY_PD, argv[5], strlen(argv[5]) + 1, 1);
+        aos_uart_send("OK", strlen("OK"), 0);
+    } else {
+        aos_uart_send("ERROR", strlen("ERROR"), 0);
+        return;
+    }
+}
+//从flash获取三元组
+void handle_get_linkkey_cmd(char *pwbuf, int blen, int argc, char **argv)
+{
+    int len = 0;
+    char product_key[PRODUCT_KEY_LEN + 1] = { 0 };
+    char product_secret[PRODUCT_SECRET_LEN + 1] = { 0 };
+    char device_name[DEVICE_NAME_LEN + 1] = { 0 };
+    char device_secret[DEVICE_SECRET_LEN + 1] = { 0 };
+    char pidStr[9] = { 0 };
+    char buf[255] = {0};
+    len = PRODUCT_KEY_LEN + 1;
+    aos_kv_get(KV_KEY_PK, product_key, &len);
+    
+    len = PRODUCT_SECRET_LEN + 1;
+    aos_kv_get(KV_KEY_PS, product_secret, &len);
+    len = DEVICE_NAME_LEN + 1;
+    aos_kv_get(KV_KEY_DN, device_name, &len);
+    len = DEVICE_SECRET_LEN + 1;
+    aos_kv_get(KV_KEY_DS, device_secret, &len);
+    // len = sizeof(pidStr);
+    // aos_kv_get(KV_KEY_PD, pidStr, &len);
+    len = sizeof(pidStr);
+    if (aos_kv_get(KV_KEY_PD, pidStr, &len) == 0) {
+        sprintf(buf,"+LINKKEYCONFIG=\"%s\",\"%s\",\"%s\",\"%s\",\"%d\"\r\n",product_key,device_name,device_secret,product_secret,atoi(pidStr));
+        aos_uart_send(buf,strlen(buf),0);
+        return;
+    }
+    sprintf(buf,"+LINKKEYCONFIG=\"%s\",\"%s\",\"%s\",\"%s\"\r\n",product_key,device_name,device_secret,product_secret);
+    aos_uart_send(buf,strlen(buf),0);
+    aos_uart_send("OK", strlen("OK"), 0);
+}

@@ -129,7 +129,7 @@ void uart0_rbuf_init(uint32_t baud_rate)
 
 void uart1_rbuf_init(uint32_t baud_rate)
 {
-    uint8_t pins[] = {4, 2}; // {tx_pin, rx_pin}
+    uint8_t pins[] = {21, 12}; // {tx_pin, rx_pin}
 
     uart_1.port = UART1_ID;
     uart_1.config.baud_rate = baud_rate;

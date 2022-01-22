@@ -357,7 +357,7 @@ static void cmd_uart1_send(char *pcWriteBuffer, int xWriteBufferLen, int argc, c
     static int g_uart_init_flag = 0;
     if (!g_uart_init_flag)
     {
-        uart1_rbuf_init(2000000);
+        uart1_rbuf_init(921600);
         g_uart_init_flag = 1;
     }
     
@@ -392,6 +392,16 @@ struct cli_command cmd[] = {
 #endif
 };
 
+#include "bl_flash.h"
+struct cli_command thrid_cmd[] = {
+    { "AT+LINKKEYCONFIG",            "set linkkit keys. linkkey [devid] [<Product Key> <Device Name> <Device Secret> <Product Secret>]", handle_set_linkkey_cmd},
+    { "AT+LINKKEYCONFIG?",           "get linkkit keys. linkkey [devid] [<Product Key> <Device Name> <Device Secret> <Product Secret>]", handle_get_linkkey_cmd},
+};
+void set_get_thrid(void)
+{
+    //注册set、get三元组指令
+    aos_cli_register_commands(thrid_cmd, sizeof(thrid_cmd)/sizeof(thrid_cmd[0]));
+}
 void trace_start(void)
 {
 #ifdef EN_COMBO_HAL_TEST
@@ -403,7 +413,7 @@ void trace_start(void)
 
 static void app_loop_entry(void *arg)
 {
-    uart0_rbuf_init(2000000);
+    uart0_rbuf_init(115200);
     hal_wifi_init();
     aos_kernel_init(&kinit);
 }
@@ -440,7 +450,7 @@ void bfl_main(void)
 
   bl_sys_early_init();
   /*Init UART In the first place*/
-  bl_uart_init(0, 16, 7, 255, 255, 2 * 1000 * 1000);
+  bl_uart_init(0, 16, 7, 255, 255, 115200);
 
   bl_irq_init();
 

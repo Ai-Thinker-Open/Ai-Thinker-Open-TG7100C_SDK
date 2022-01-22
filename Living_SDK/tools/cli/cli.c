@@ -199,7 +199,9 @@ static int handle_input(char *inbuf)
             }
             break;
 
-        case ' ':
+        case ',':
+            break;
+        case '=':
             if (i > 0 && inbuf[i - 1] == '\\' && stat.inArg)
             {
                 memcpy(&inbuf[i - 1], &inbuf[i],

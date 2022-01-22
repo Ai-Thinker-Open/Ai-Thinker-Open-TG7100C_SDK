@@ -22,3 +22,34 @@ tg7100c:        tg7100cevb
 RDA5981A: 	hf-lpb130 hf-lpb135 hf-lpt230 hf-lpt130 uno-91h
 rtl8710bn: 	mk3080 mk3092
 asr5502: 	mx1270
+
+
+## 注意
+由于安信可统一了三元组烧录指令，当用需要使用读取三元组时需要将读取API的KEY值统一更换为安信可规定的KEY值，修改如下
+
+获取productKey：
+
+    `aos_kv_get(KV_KEY_PK, product_key, &pk_len);` 
+
+获取ProduceSecret：
+
+    `aos_kv_get(KV_KEY_PS, product_secret, &ps_len);`
+
+获取DeviceName：
+
+    `aos_kv_get(KV_KEY_DN, device_name, &dn_len);`
+
+获取DeviceSecret:
+
+    `aos_kv_get(KV_KEY_DS, device_secret, &ds_len);`
+
+获取ProductID：
+
+    `aos_kv_get(KV_KEY_PD, pidStr, &len);`
+
+安信可烧录三元组AT指令格式：
+
+    AT+LINKKEYCONFIG="ProductID","DeviceName","DeviceSecret","ProduceSecret","ProductID"
+查询三元组指令格式
+    AT+LINKKEYCONFIG?
+
