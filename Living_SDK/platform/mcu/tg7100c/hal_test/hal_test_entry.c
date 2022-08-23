@@ -10,6 +10,7 @@
 
 extern void test_hal_rtc(char *cmd, int type, char *data);
 extern void test_hal_timer(char *cmd, int type, char *data);
+extern void test_hal_timer_us(char *cmd, int type, char *data);
 extern void test_hal_eflash(char *cmd, int type, char *data);
 extern void test_hal_spi_master(char *cmd, int type, char *data);
 extern void test_hal_spi_slave(char *cmd, int type, char *data);
@@ -39,6 +40,16 @@ static void cmd_test_hal_timer(char *pcWriteBuffer, int xWriteBufferLen, int arg
     }    
     printf("argv[1]:%s\r\n", argv[1]);
     test_hal_timer(NULL, 0, argv[1]);
+}
+
+static void cmd_test_hal_timer_us(char *pcWriteBuffer, int xWriteBufferLen, int argc, char **argv)
+{
+    if (argc < 2) {
+        printf("param error\r\n");
+        return;
+    }    
+    printf("argv[1]:%s\r\n", argv[1]);
+    test_hal_timer_us(NULL, 0, argv[1]);
 }
 
 static void cmd_test_hal_eflash(char *pcWriteBuffer, int xWriteBufferLen, int argc, char **argv)
@@ -138,6 +149,7 @@ static void cmd_test_hal_uart_master(char *pcWriteBuffer, int xWriteBufferLen, i
 static const struct cli_command g_hal_test_cmd[] = {
     {"test_rtc", "test_rtc", cmd_test_hal_rtc},
     {"test_timer", "", cmd_test_hal_timer},
+    {"test_timer_us", "test timer us", cmd_test_hal_timer_us},
     {"test_eflash", "test_eflash", cmd_test_hal_eflash},
     {"test_spi_master", "test_spi_master", cmd_test_hal_spi_master},
     {"test_spi_slave", "test_spi_slave", cmd_test_hal_spi_slave},

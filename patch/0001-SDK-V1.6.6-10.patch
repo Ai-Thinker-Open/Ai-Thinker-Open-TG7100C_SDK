@@ -8,19 +8,19 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 ---
- Living_SDK/kernel/init/aos_init.c             |   3 +-
- .../platform/mcu/tg7100c/aos/aos_main.c       |  16 ++-
- .../platform/mcu/tg7100c/aos/aos_main.h       |   2 +-
- .../platform/mcu/tg7100c/aos/soc_init.c       |   2 +-
- .../tg7100c/hal_drv/tg7100c_hal/bl_efuse.c    | 101 ++++++++++++++++++
- .../tg7100c/hal_drv/tg7100c_hal/bl_efuse.h    |   4 +
- .../tg7100c/hal_drv/tg7100c_hal/bl_flash.c    |  50 +++++++++
- .../tg7100c/hal_drv/tg7100c_hal/bl_flash.h    |  13 +++
- .../tg7100c/hal_drv/tg7100c_hal/hal_board.c   | 100 ++++++++---------
- Living_SDK/tools/cli/cli.c                    |   4 +-
+     Living_SDK/kernel/init/aos_init.c             |   3 +-
+     .../platform/mcu/tg7100c/aos/aos_main.c       |  16 ++-
+     .../platform/mcu/tg7100c/aos/aos_main.h       |   2 +-
+     .../platform/mcu/tg7100c/aos/soc_init.c       |   2 +-
+     .../tg7100c/hal_drv/tg7100c_hal/bl_efuse.c    | 101 ++++++++++++++++++
+     .../tg7100c/hal_drv/tg7100c_hal/bl_efuse.h    |   4 +
+     .../tg7100c/hal_drv/tg7100c_hal/bl_flash.c    |  50 +++++++++
+     .../tg7100c/hal_drv/tg7100c_hal/bl_flash.h    |  13 +++
+     .../tg7100c/hal_drv/tg7100c_hal/hal_board.c   | 100 ++++++++---------
+     Living_SDK/tools/cli/cli.c                    |   4 +-
  Products/example/smart_outlet/vendor.c        |  11 +-
  README.md                                     |  31 ++++++
- tools/tg7100cevb.sh                           |   2 +
+     tools/tg7100cevb.sh                           |   2 +
  13 files changed, 279 insertions(+), 60 deletions(-)
 
 diff --git a/Living_SDK/kernel/init/aos_init.c b/Living_SDK/kernel/init/aos_init.c

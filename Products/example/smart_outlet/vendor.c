@@ -337,7 +337,7 @@ int vendor_get_device_secret(char *device_secret, int *len)
 int vendor_get_product_id(uint32_t *pid)
 {
     int ret = -1;
-    char pidStr[9] = { 0 };
+    char pidStr[11] = {0};
     int len = sizeof(pidStr);
 
     ret = aos_kv_get(KV_KEY_PD, pidStr, &len);

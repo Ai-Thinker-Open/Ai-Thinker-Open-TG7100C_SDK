@@ -343,6 +343,7 @@ static int get_one_device_mate(int devid, iotx_linkkit_dev_meta_info_t *p_subdev
 {
     int len = 0;
     char key_buf[MAX_KEY_LEN];
+    extern int iotx_dm_get_subdev_triples_by_devid(_IN_ int devid, iotx_linkkit_dev_meta_info_t *p_subdev);
 
     if (!p_subdev)
         return -1;

@@ -51,6 +51,21 @@
  *  @{
  */
 
+/**
+ *  @brief Serial flash security register configuration
+ */
+typedef struct {
+    uint8_t  eraseCmd;                      /*!< Erase security register command */
+    uint8_t  programCmd;                    /*!< Program security register command */
+    uint8_t  readCmd;                       /*!< Read security register command */
+    uint8_t  enterSecOptCmd;                 /*!< Enter security register option mode command */
+    uint8_t  exitSecOptCmd;                  /*!< Exit security register option mode command */
+    uint8_t  blockNum;                      /*!< Security register block number */
+    uint8_t  *data;                         /*!< Data pointer to be program/read */
+    uint32_t addr;                          /*!< Start address to be program/read */
+    uint32_t len;                           /*!< Data length to be program/read */
+}SFlash_Sec_Reg_Cfg;
+
 /*@} end of group SFLAH_EXT_Public_Types */
 
 /** @defgroup  SFLAH_EXT_Public_Constants
@@ -69,7 +84,13 @@
  *  @{
  */
 BL_Err_Type SFlash_Restore_From_Powerdown(SPI_Flash_Cfg_Type *pFlashCfg,uint8_t flashContRead);
+BL_Err_Type SFlash_RCV_Enable(SPI_Flash_Cfg_Type *pFlashCfg, uint8_t rCmd, uint8_t wCmd, uint8_t bitPos);
+BL_Err_Type SFlash_Erase_Security_Register(SPI_Flash_Cfg_Type *pFlashCfg, SFlash_Sec_Reg_Cfg *pSecRegCfg);
+BL_Err_Type SFlash_Program_Security_Register(SPI_Flash_Cfg_Type *pFlashCfg,
+                                             SFlash_Sec_Reg_Cfg *pSecRegCfg);
+BL_Err_Type SFlash_Read_Security_Register(SFlash_Sec_Reg_Cfg *pSecRegCfg);
 BL_Err_Type SFlash_Clear_Status_Register(SPI_Flash_Cfg_Type *pFlashCfg);
+
 /*@} end of group SFLAH_EXT_Public_Functions */
 
 /*@} end of group SFLAH_EXT */

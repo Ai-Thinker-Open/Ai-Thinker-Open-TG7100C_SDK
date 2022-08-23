@@ -143,6 +143,7 @@ HAL_TEST_SOURCES := hal_test/hal_test_entry.c \
 					hal_test/wdt_test.c	\
 					hal_test/gpio_test.c	\
 					hal_test/timer_test.c	\
+					hal_test/timer_test_us.c \
 
 $(NAME)_SOURCES += $(HAL_TEST_SOURCES)
 

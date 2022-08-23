@@ -873,3 +873,18 @@ const char* wifi_mgmr_status_code_str(uint16_t status_code)
         }
     }
 }
+
+int wifi_mgmr_get_auth(char **auth)
+{
+    int i;
+
+    for (i = 0; i < sizeof(wifiMgmr.scan_items)/sizeof(wifiMgmr.scan_items[0]); i++) {
+        if (wifiMgmr.scan_items[i].is_used &&
+            0 == strncmp(wifiMgmr.wifi_mgmr_stat_info.ssid, wifiMgmr.scan_items[i].ssid, 32)) {
+            *auth = wifi_mgmr_auth_to_str(wifiMgmr.scan_items[i].auth);
+            return 0;
+        }   
+    }   
+    return -1; 
+} 
+

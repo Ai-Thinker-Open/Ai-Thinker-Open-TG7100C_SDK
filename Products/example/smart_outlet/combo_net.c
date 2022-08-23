@@ -143,11 +143,17 @@ static void combo_status_change_cb(breeze_event_t event)
 
 static void combo_set_dev_status_cb(uint8_t *buffer, uint32_t length)
 {
+    if (NULL == buffer || 0 == length) {
+        return;
+    }
     LOG("BLE_SET:%.*s", length, buffer);
 }
 
 static void combo_get_dev_status_cb(uint8_t *buffer, uint32_t length)
 {
+    if (NULL == buffer || 0 == length) {
+        return;
+    }
     LOG("BLE_QUE:%.*s", length, buffer);
 }
 
@@ -275,7 +281,7 @@ static void combo_connect_ap(breeze_apinfo_t * info)
     hal_wifi_suspend_station(NULL);
     netmgr_reconnect_wifi();
     ms_cnt = 0;
-    while (ms_cnt < 30000) {
+    while (ms_cnt < 40000) {
         // set connect ap timeout
         if (netmgr_get_ip_state() == false) {
             aos_msleep(500);
@@ -330,10 +336,9 @@ static void combo_connect_ap(breeze_apinfo_t * info)
 
         combo_set_ap_state(COMBO_AP_DISCONNECTED);
         netmgr_clear_ap_config();
-        if (g_combo_wifi.awss_run) {
-            // for combo device, ble_awss and smart_config awss mode can exist simultaneously
-            device_start_awss(0);
-        }
+
+        /* always restart awss if connect ap failed */
+        device_start_awss(0);
     }
 }
 
@@ -395,9 +400,7 @@ static void combo_service_evt_handler(input_event_t * event, void *priv_data)
         memcpy((void *)&g_apinfo, (void *)event->value, sizeof(breeze_apinfo_t));
         aos_sem_signal(&wifi_connect_sem);
     } else if (event->code == COMBO_EVT_CODE_RESTART_ADV) {
-        if (!g_ble_state) {
-            combo_restart_ble_adv();
-        }
+        combo_restart_ble_adv();
     } else {
         LOG("Unknown combo event");
     }

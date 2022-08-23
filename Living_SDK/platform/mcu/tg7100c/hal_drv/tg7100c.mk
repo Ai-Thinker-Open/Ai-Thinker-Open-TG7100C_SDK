@@ -40,6 +40,7 @@ COMPONENT_SRCS := tg7100c_hal/bl_uart.c \
                   tg7100c_hal/bl_dac_audio.c \
                   tg7100c_hal/hal_button.c \
                   tg7100c_hal/hal_hbnram.c \
+                  tg7100c_hal/hosal_timer.c \
 
 COMPONENT_SRCDIRS := tg7100c_hal
 

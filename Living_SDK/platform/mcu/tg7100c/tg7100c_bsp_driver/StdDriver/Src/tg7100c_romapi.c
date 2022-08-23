@@ -175,12 +175,14 @@ __ALWAYS_INLINE
 GLB_ROOT_CLK_Type ATTR_CLOCK_SECTION GLB_Get_Root_CLK_Sel(void){
     return RomDriver_GLB_Get_Root_CLK_Sel();
 }
+
 #if 0
 __ALWAYS_INLINE
 BL_Err_Type ATTR_CLOCK_SECTION GLB_Set_System_CLK_Div(uint8_t hclkDiv,uint8_t bclkDiv){
     return RomDriver_GLB_Set_System_CLK_Div(hclkDiv,bclkDiv);
 }
 #endif
+
 __ALWAYS_INLINE
 uint8_t ATTR_CLOCK_SECTION GLB_Get_BCLK_Div(void){
     return RomDriver_GLB_Get_BCLK_Div();
@@ -251,10 +253,12 @@ BL_Err_Type ATTR_TCM_SECTION GLB_Swap_Flash_Pin(void){
     return RomDriver_GLB_Swap_Flash_Pin();
 }
 
+#if 0
 __ALWAYS_INLINE
 BL_Err_Type ATTR_TCM_SECTION GLB_GPIO_Init(GLB_GPIO_Cfg_Type *cfg){
     return RomDriver_GLB_GPIO_Init(cfg);
 }
+#endif
 
 __ALWAYS_INLINE
 BL_Err_Type ATTR_TCM_SECTION GLB_GPIO_OUTPUT_Enable(GLB_GPIO_Type gpioPin){

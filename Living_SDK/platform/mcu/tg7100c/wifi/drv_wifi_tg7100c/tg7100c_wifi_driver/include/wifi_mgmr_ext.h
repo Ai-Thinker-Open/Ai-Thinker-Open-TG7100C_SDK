@@ -148,4 +148,5 @@ const char* wifi_mgmr_status_code_str(uint16_t status_code);
 int wifi_mgmr_beacon_interval_set(uint16_t beacon_int);
 int wifi_mgmr_set_wifi_active_time(uint16_t ms);
 int wifi_mgmr_set_listen_interval(uint16_t itv);
+int wifi_mgmr_get_auth(char **auth);
 #endif

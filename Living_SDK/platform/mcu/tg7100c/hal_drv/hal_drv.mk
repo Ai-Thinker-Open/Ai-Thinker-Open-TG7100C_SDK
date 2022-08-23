@@ -33,6 +33,7 @@ $(NAME)_SOURCES += tg7100c_hal/bl_uart.c \
                   tg7100c_hal/bl_i2c.c \
                   tg7100c_hal/hal_hwtimer.c \
                   tg7100c_hal/hal_hbn.c \
+                  tg7100c_hal/hosal_timer.c \
                   #tg7100c_hal/hal_uart.c \
                   tg7100c_hal/hal_gpio.c \
                   tg7100c_hal/hal_hbn.c \
