@@ -24,9 +24,9 @@
 #define COMBO_AP_CONNECTED             1        // ap disconnected
 #define COMBO_AP_CONN_UNINIT           2        // combo device not connect ap yet
 
-// Combo device AP config need or not
-#define COMBO_AWSS_NOT_NEED            0        // ap configuration is not required
-#define COMBO_AWSS_NEED                1        // ap configuration is required
+// Combo awss silent adv flag
+#define COMBO_AWSS_NORMAL              0        // ap configuration is not required
+#define COMBO_AWSS_SILENT              1        // ap configuration is required
 
 typedef int (* combo_event_cb)(uint16_t evt_code);
 typedef int (* combo_common_serv_cb)(const int devid, const char *serviceid, const int serviceid_len,

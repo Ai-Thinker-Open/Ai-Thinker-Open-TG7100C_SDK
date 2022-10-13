@@ -27,7 +27,20 @@ typedef struct os_timer {
 #define os_critical_enter()    CPSR_ALLOC(); RHINO_CPU_INTRPT_DISABLE();
 #define os_critical_exit()     RHINO_CPU_INTRPT_ENABLE()
 
+#define bl_os_enter_critical() CPSR_ALLOC(); RHINO_CPU_INTRPT_DISABLE();
+#define bl_os_exit_critical() RHINO_CPU_INTRPT_ENABLE()
+#define bl_os_get_tick bl_os_tick_get
+#define bl_os_log_info bl_os_printf
+#define bl_os_log_debug debug_printf
+#define bl_os_log_warn debug_printf
+#define bl_os_puts bl_os_printf
+#define bl_os_log_error bl_os_printf
+#define bl_os_msleep aos_msleep
+#define bl_os_get_time_ms aos_now_ms
+
+int debug_printf(const char *fmt, ...);
 int os_printf(const char *fmt, ...);
+int bl_os_printf(const char *fmt, ...);
 void bl_os_free(void *ptr);
 void *bl_os_malloc(uint32_t size);
 
@@ -72,5 +85,6 @@ int bl_os_timer_init(os_timer_t *timer, const char *name, void (*cb)(void *),
 int bl_os_timer_start(os_timer_t *timer);
 int bl_os_timer_startFromISR(os_timer_t *timer);
 timer_cb_arg_t bl_os_timer_data(timer_cb_arg_t arg);
+
 
 #endif

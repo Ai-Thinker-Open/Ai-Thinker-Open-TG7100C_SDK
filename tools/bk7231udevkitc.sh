@@ -18,6 +18,8 @@ function files_cp()
 	#cp Living_SDK/platform/mcu/bk7231u/beken/alios/entry/entry.a  prebuild/lib/
 	cp Living_SDK/security/irot/km/lib/ARM968E-S/libkm.a prebuild/lib
 	cp Living_SDK/framework/protocol/linkkit/sdk/lib/ARM968E-S/*.a  prebuild/lib
+	cp -rfa Living_SDK/framework/protocol/linkkit/sdk/iotx-sdk-c_clone/src/infra/utils/digest/utils_md5.h prebuild/include
+	cp -rfa Living_SDK/security/imbedtls/include/mbedtls prebuild/include
 
 	rm -f prebuild/lib/$2.a
 

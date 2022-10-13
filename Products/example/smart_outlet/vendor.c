@@ -117,9 +117,9 @@ void product_init_switch(void)
     if (ret != 0)
         state = ON;
 #elif (REBOOT_STATE == POWER_OFF)
-    state == OFF;
+    state = OFF;
 #else
-    state == ON;
+    state = ON;
 #endif
     if (state == OFF) {
         product_set_switch(OFF);

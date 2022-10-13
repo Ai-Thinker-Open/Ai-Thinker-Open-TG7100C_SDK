@@ -1,7 +1,37 @@
 #include "os_hal.h"
-#include "stdarg.h"
+#include <stdarg.h>
+
+int debug_printf(const char *fmt, ...)
+{
+#if 0
+#if CFG_WIFI_DEBUG
+extern void vprint(const char *fmt, va_list argp);
+
+    va_list argp;
+    va_start(argp, fmt);
+    vprint(fmt, argp);
+    va_end(argp);
+#endif
+    return 0;
+#endif
+
+    return 0;
+}
 
 int os_printf(const char *fmt, ...)
+{
+#if CFG_WIFI_DEBUG
+extern void vprint(const char *fmt, va_list argp);
+
+    va_list argp;
+    va_start(argp, fmt);
+    vprint(fmt, argp);
+    va_end(argp);
+#endif
+    return 0;
+}
+
+int bl_os_printf(const char *fmt, ...)
 {
 #if CFG_WIFI_DEBUG
 extern void vprint(const char *fmt, va_list argp);

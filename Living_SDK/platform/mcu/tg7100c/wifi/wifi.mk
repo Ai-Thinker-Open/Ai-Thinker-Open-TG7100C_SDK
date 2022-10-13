@@ -6,6 +6,7 @@ NAME := tg7100c_wifi_driver
 COMPONENT_ADD_INCLUDEDIRS += drv_wifi_tg7100c/tg7100c_wifi_driver/include \
                              drv_wifi_tg7100c/os_port/aos \
                              drv_wifi_tg7100c/inc/aos \
+                             wifi_hosal/include \
 
 ## not be exported to project level
 COMPONENT_PRIV_INCLUDEDIRS := drv_wifi_tg7100c/tg7100c_wifi_driver
@@ -13,7 +14,6 @@ COMPONENT_PRIV_INCLUDEDIRS := drv_wifi_tg7100c/tg7100c_wifi_driver
 ## This component's src
 COMPONENT_SRCS := drv_wifi_tg7100c/tg7100c_wifi_driver/ipc_host.c \
                   drv_wifi_tg7100c/os_port/aos/os_hal.c \
-				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_apis.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_cmds.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_irqs.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_main.c \
@@ -21,8 +21,7 @@ COMPONENT_SRCS := drv_wifi_tg7100c/tg7100c_wifi_driver/ipc_host.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_msg_rx.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_msg_tx.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_platform.c \
-				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_rx.c \
-				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_strs.c \
+				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_rx.c	\
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_tx.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/bl_utils.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/stateMachine.c \
@@ -35,10 +34,13 @@ COMPONENT_SRCS := drv_wifi_tg7100c/tg7100c_wifi_driver/ipc_host.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/wifi_mgmr_event.c \
 				  drv_wifi_tg7100c/tg7100c_wifi_driver/wifi_mgmr_cli.c \
 				  version.c \
+				  wifi_hosal/wifi_hosal.c \
+				  wifi_hosal/port/wifi_hosal_tg7100c.c  \
 
 $(NAME)_COMPONENTS += platform/mcu/tg7100c/wifi/firmware 
 
-COMPONENT_SRCDIRS := drv_wifi_tg7100c/tg7100c_wifi_driver
+COMPONENT_SRCDIRS += drv_wifi_tg7100c/tg7100c_wifi_driver \
+                     wifi_hosal \
 
 GLOBAL_INCLUDES += $(COMPONENT_ADD_INCLUDEDIRS) $(COMPONENT_PRIV_INCLUDEDIRS)
 

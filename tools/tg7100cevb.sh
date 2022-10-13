@@ -39,11 +39,12 @@ function files_cp()
 	cp -rfa Living_SDK/framework/uOTA/hal/*.h prebuild/include
 	cp -rfa Living_SDK/framework/protocol/linkkit/sdk/iotx-sdk-c_clone/include/* prebuild/include
 	cp -rfa Living_SDK/framework/protocol/linkkit/sdk/iotx-sdk-c_clone/src/infra/utils/misc/*.h prebuild/include
+	cp -rfa Living_SDK/framework/protocol/linkkit/sdk/iotx-sdk-c_clone/src/infra/utils/digest/utils_md5.h prebuild/include
 	cp -rfa Living_SDK/framework/protocol/linkkit/sdk/iotx-sdk-c_clone/src/infra/log/*.h prebuild/include
 	cp -rfa Living_SDK/platform/arch/risc-v/risc_v32I/gcc/*.h prebuild/include
 	cp -rfa Living_SDK/framework/bluetooth/breeze/api/breeze_export.h prebuild/include
 	cp -rfa Living_SDK/framework/bluetooth/breeze/include/*.h prebuild/include
-
+	cp -rfa Living_SDK/security/imbedtls/include/mbedtls prebuild/include
 	cp --parents Living_SDK/kernel/rhino/core/include/* prebuild/include
 	cp --parents Living_SDK/kernel/vfs/include/*.h prebuild/include
 	mv prebuild/include/Living_SDK/kernel prebuild/include
@@ -94,7 +95,7 @@ function build_bin()
 
 	CHIP_LIBS="-Wl,--end-group -Wl,-no-whole-archive -Wl,--gc-sections -Wl,--cref -L ./$p/ -T ./$p/flash_rom.ld -march=rv32imfc -mabi=ilp32f -Os -nostartfiles -Wl,--gc-sections -Wl,--cref --specs=nano.specs -u _printf_float -lm "
 	
-	COMMON_LIBS="$p/fw_app_version.a $p/$2.a  $p/board_$3.a  $p/$CHIP.a  $p/vcall.a  $p/kernel_init.a  $p/auto_component.a   $p/libiot_sdk.a $p/iotx-hal.a  $p/netmgr.a  $p/framework.a  $p/cjson.a  $p/ota.a  $p/cli.a  $p/ota_hal.a  $p/$ARCH.a  $p/newlib_stub.a  $p/rhino.a  $p/digest_algorithm.a  $p/log.a  $p/activation.a  $p/imbedtls.a $p/yloop.a  $p/hal.a  $p/ota_transport.a  $p/ota_download.a  $p/ota_verify.a  $p/base64.a  $p/alicrypto.a  $p/vfs.a  $p/vfs_device.a   $p/libawss_security.a $p/libaiotss.a $p/breeze.a $p/breeze_adapter.a $p/blecontroller.a $p/blestack.a $p/tg7100c_wifi_driver.a $p/tg7100c_dhcpd.a $p/tg7100c_utils.a $p/blfdt.a $p/tg7100c_lwip.a $p/chip_code.a $p/hal_drv.a $p/firmware.a $p/blmtd.a $p/tg7100c_dns_server.a $p/ble.a $p/coredump.a $p/tg7100c_netutils.a $p/pwrmgmt.a $p/tg7100c_blcrypto_suite.a"
+	COMMON_LIBS="$p/fw_app_version.a $p/$2.a  $p/board_$3.a  $p/$CHIP.a  $p/vcall.a  $p/kernel_init.a  $p/auto_component.a   $p/libiot_sdk.a $p/iotx-hal.a  $p/netmgr.a  $p/framework.a  $p/cjson.a  $p/ota.a  $p/cli.a  $p/ota_hal.a  $p/$ARCH.a  $p/newlib_stub.a  $p/rhino.a  $p/digest_algorithm.a  $p/log.a  $p/activation.a  $p/imbedtls.a $p/yloop.a  $p/hal.a  $p/ota_transport.a  $p/ota_download.a  $p/ota_verify.a  $p/base64.a  $p/alicrypto.a  $p/vfs.a  $p/vfs_device.a   $p/libawss_security.a $p/libaiotss.a $p/breeze.a $p/breeze_adapter.a $p/blecontroller.a $p/blestack.a $p/tg7100c_wifi_driver.a $p/tg7100c_dhcpd.a $p/tg7100c_utils.a $p/blfdt.a $p/tg7100c_lwip.a $p/chip_code.a $p/hal_drv.a $p/firmware.a $p/blmtd.a $p/tg7100c_dns_server.a $p/ble.a $p/coredump.a $p/tg7100c_netutils.a $p/pwrmgmt.a $p/tg7100c_blcrypto_suite_tg.a $p/tg7100c_wpa_supplicant.a"
 	$CC -Wl,-Map,$OUT/$2@$3.map -Wl,--whole-archive -Wl,--start-group  ${COMMON_LIBS} ${CHIP_LIBS} -o $OUT/$2@$3.elf
 
 	## generate map & strip elf

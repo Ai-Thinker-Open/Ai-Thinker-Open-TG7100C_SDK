@@ -305,13 +305,13 @@ void breeze_restart_advertising();
 /**
  * @brief Start BLE advertisement. This API will start the adv.
  *
- * @param[in] awss_flag @n if combo, awss need or not.
+ * @param[in] awss_flag @n if combo, awss silent adv or not.
  * @param[in] bind_state @n device bind state.
  * @return result 0-success, <0-fail.
  * @see None.
  * @note User can call this API if he/she wants to start the adv
  */
-int breeze_start_advertising(uint8_t bind_state, uint8_t awss_flag);
+int breeze_start_advertising(uint8_t bind_state, uint8_t silent_flag);
 
 /**
  * @brief Stop BLE advertisement. This API will stop the adv.
@@ -349,6 +349,37 @@ int breeze_clear_bind_info(void);
  * @see None.
  */
 void breeze_disconnect_ble(void);
+
+typedef enum {
+    AIS_AWSS_STATUS_AP_CONNECTED        = 1,        /* 用于上报配网成功状态 */
+    AIS_AWSS_STATUS_AP_CONNECT_FAILED   = 2,        /* 用于上报配网失败状态 */
+    AIS_AWSS_STATUS_TOKEN_REPORTED      = 3,        /* 用于上报token上报成功状态 */
+    AIS_AWSS_STATUS_PROGRESS_REPORT     = 4,        /* 用于上报配网过程状态 */
+    AIS_AWSS_STATUS_MAXIMUM             = 5,        /* 不可用 */
+} ais_awss_status_t;
+
+typedef enum {
+    AIS_AWSS_FATALERR_SSID_NOT_EXIST    = 50400,
+    AIS_AWSS_FATALERR_SSID_SIGNAL_LOW   = 50401,
+    AIS_AWSS_FATALERR_AUTH_TIMEOUT      = 50402,
+    AIS_AWSS_FATALERR_CONNECT_AP_FAILED = 50403,
+} ais_awss_fatal_error_substatus_t;
+
+typedef enum {
+    AIS_AWSS_PROGRESS_CONNECT_AP_START      = 0x0001,
+    AIS_AWSS_PROGRESS_GET_IP_START          = 0x0002,
+    AIS_AWSS_PROGRESS_CONNECT_MQTT_START    = 0x0003,
+
+    AIS_AWSS_PROGRESS_CONNECT_AP_SUCCESS    = 0x0004,
+    AIS_AWSS_PROGRESS_GET_IP_SUCCESS        = 0x0005,
+    AIS_AWSS_PROGRESS_CONNECT_MQTT_SUCCESS  = 0x0006,
+
+    AIS_AWSS_PROGRESS_CONNECT_AP_FAILED     = 0x0100,
+    AIS_AWSS_PROGRESS_GET_IP_FAILED         = 0x0200,
+    AIS_AWSS_PROGRESS_CONNECT_MQTT_FAILED   = 0x0300,
+} ais_awss_progress_substatus_t;
+
+int32_t aiot_ais_report_awss_status(ais_awss_status_t status, uint16_t subcode);
 
 #if defined(__cplusplus) /* If this is a C++ compiler, use C linkage */
 }

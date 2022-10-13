@@ -17,12 +17,13 @@
 #define BFLB_CRYPT_OK             0
 #define BFLB_CRYPT_ERROR          -1
 
-#define BFLB_CRYPT_TYPE_AES_CBC       			0
-#define BFLB_CRYPT_TYPE_AES_CTR       			1
-#define BFLB_CRYPT_TYPE_CHACHA    				2
-#define BFLB_CRYPT_TYPE_AES_CCM       			3
-#define BFLB_CRYPT_TYPE_AES_GCM       			4
-#define BFLB_CRYPT_TYPE_CHACHAPOLY1305       	5
+#define BFLB_CRYPT_TYPE_AES_ECB                 0
+#define BFLB_CRYPT_TYPE_AES_CBC       			1
+#define BFLB_CRYPT_TYPE_AES_CTR       			2
+#define BFLB_CRYPT_TYPE_CHACHA    				3
+#define BFLB_CRYPT_TYPE_AES_CCM       			4
+#define BFLB_CRYPT_TYPE_AES_GCM       			5
+#define BFLB_CRYPT_TYPE_CHACHAPOLY1305       	6
 
 typedef struct tag_bflb_crypt_handle_t
 {

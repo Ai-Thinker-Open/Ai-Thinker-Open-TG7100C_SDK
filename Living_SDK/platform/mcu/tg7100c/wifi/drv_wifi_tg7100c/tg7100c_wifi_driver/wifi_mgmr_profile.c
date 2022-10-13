@@ -29,7 +29,7 @@ int wifi_mgmr_profile_add(wifi_mgmr_t *mgmr, wifi_mgmr_profile_msg_t *profile_ms
                 profile = &(mgmr->profiles[i]);
                 
                 mgmr->profile_active_index = i;
-                os_printf("[WF][PF] Using free profile, idx is @%d\r\n", i);
+                bl_os_printf("[WF][PF] Using free profile, idx is @%d\r\n", i);
                 break;
             }
         }
@@ -41,13 +41,16 @@ int wifi_mgmr_profile_add(wifi_mgmr_t *mgmr, wifi_mgmr_profile_msg_t *profile_ms
     profile->isUsed = 1;//Set isUsed firstly
     profile->isActive = 0;//By default, isActive is 0
     profile->ssid_len = profile_msg->ssid_len;
+    profile->passphr_len = profile_msg->passphr_len;
     profile->psk_len = profile_msg->psk_len;
-    profile->pmk_len = profile_msg->pmk_len;
+    profile->band = profile_msg->band;
+    profile->freq = profile_msg->freq;
+    profile->ap_info_ttl = profile_msg->ap_info_ttl;
     profile->priority = 255;
     memcpy(profile->ssid, profile_msg->ssid, sizeof(profile->ssid));
     memcpy(profile->psk, profile_msg->psk, sizeof(profile->psk));
-    memcpy(profile->pmk, profile_msg->pmk, sizeof(profile->pmk));
-    memcpy(profile->mac, profile_msg->mac, sizeof(profile->mac));
+    memcpy(profile->passphr, profile_msg->passphr, sizeof(profile->passphr));
+    memcpy(profile->bssid, profile_msg->bssid, sizeof(profile->bssid));
     profile->dhcp_use = profile_msg->dhcp_use;
 
     return 0;
@@ -67,7 +70,7 @@ int wifi_mgmr_profile_del(wifi_mgmr_t *mgmr, char *ssid, int len)
             if (i == mgmr->profile_active_index) {
                 mgmr->profile_active_index = -1;
             }
-            os_printf("[WF][PF] Free profile, idx is @%d\r\n", i);
+            bl_os_printf("[WF][PF] Free profile, idx is @%d\r\n", i);
             break;
         }
     }
@@ -88,7 +91,7 @@ int wifi_mgmr_profile_get(wifi_mgmr_t *mgmr, wifi_mgmr_profile_msg_t *profile_ms
     for (i = 0; i < sizeof(mgmr->profiles)/sizeof(mgmr->profiles[0]); i++) {
         if (1 == mgmr->profiles[i].isUsed) {
             profile = &(mgmr->profiles[i]);
-            os_printf("[WF][PF] Using profile, idx is @%d\r\n", i);
+            bl_os_printf("[WF][PF] Using profile, idx is @%d\r\n", i);
             break;
         }
     }
@@ -99,12 +102,15 @@ int wifi_mgmr_profile_get(wifi_mgmr_t *mgmr, wifi_mgmr_profile_msg_t *profile_ms
     memset(profile_msg, 0, sizeof(*profile_msg));
     profile_msg->ssid_len = profile->ssid_len;
     profile_msg->psk_len = profile->psk_len;
-    profile_msg->pmk_len = profile->pmk_len;
+    profile_msg->passphr_len = profile->passphr_len;
+    profile_msg->band = profile->band;
+    profile_msg->freq = profile->freq;
+    profile_msg->ap_info_ttl = profile->ap_info_ttl;
     profile_msg->dhcp_use = profile->dhcp_use;
     memcpy(profile_msg->ssid, profile->ssid, sizeof(profile->ssid));
     memcpy(profile_msg->psk, profile->psk, sizeof(profile->psk));
-    memcpy(profile_msg->pmk, profile->pmk, sizeof(profile->pmk));
-    memcpy(profile_msg->mac, profile->mac, sizeof(profile->mac));
+    memcpy(profile_msg->passphr, profile->passphr, sizeof(profile->passphr));
+    memcpy(profile_msg->bssid, profile->bssid, sizeof(profile->bssid));
 
     return 0;
 }

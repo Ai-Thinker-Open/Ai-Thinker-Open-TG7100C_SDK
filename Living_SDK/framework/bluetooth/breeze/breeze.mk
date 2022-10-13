@@ -39,6 +39,15 @@ $(NAME)_SOURCES += core/extcmd.c
 $(NAME)_SOURCES += api/breeze_awss_export.c
 endif
 
+bz_en_ble_ota ?= 0
+ifeq ($(bz_en_ble_ota), 1)
+GLOBAL_DEFINES += CONFIG_GENIE_OTA
+$(NAME)_SOURCES += ble_ota/genie_ais.c
+$(NAME)_SOURCES += ble_ota/genie_ota.c
+$(NAME)_SOURCES += ble_ota/genie_sal_ota.c
+GLOBAL_INCLUDES += ble_ota
+endif
+
 bz_long_mtu ?= 1
 ifeq ($(bz_long_mtu), 1)
 GLOBAL_DEFINES += EN_LONG_MTU

@@ -155,6 +155,7 @@ int bl_sec_init(void)
 {
     //g_bl_sec_sha_mutex = xSemaphoreCreateMutexStatic(&sha_mutex_buf);
     bl_os_mutex_create(&g_bl_sec_sha_mutex);
+    bl_sec_pka_init();
     _trng_trigger();
     wait_trng4feed();
     /*Trigger again*/

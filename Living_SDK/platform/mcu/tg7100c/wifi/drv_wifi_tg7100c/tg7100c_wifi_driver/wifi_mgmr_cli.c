@@ -1,11 +1,8 @@
-#include <stdio.h>
+// #include <stdio.h>
 #include <string.h>
-//#include <FreeRTOS.h>
-//#include <task.h>
-#include <os_hal.h>
 #include <aos/cli.h>
 
-#include <blog.h>
+#include <bl_os_private.h>
 #include <bl_wifi.h>
 #include <hal_sys.h>
 #include <tg710x_fw_api.h>
@@ -13,6 +10,7 @@
 #include <wifi_mgmr_api.h>
 #include <utils_hexdump.h>
 #include <utils_tlv_bl.h>
+#include <utils_string.h>
 #include <utils_getopt.h>
 #include <wifi_mgmr_ext.h>
 
@@ -81,7 +79,7 @@ static void chan_str_to_hex(uint8_t *sta_num, char *sta_str)
         base = base * 10;
     }
     (*sta_num) = val;
-    os_printf("sta_str: %s, str_len: %d, sta_num: %d, q: %s\r\n", sta_str, str_len, (*sta_num), q);
+    bl_os_printf("sta_str: %s, str_len: %d, sta_num: %d, q: %s\r\n", sta_str, str_len, (*sta_num), q);
 
 }
 
@@ -95,21 +93,21 @@ static void wifi_ap_sta_list_get_cmd(char *buf, int len, int argc, char **argv)
 
     wifi_mgmr_state_get(&state);
     if (!WIFI_STATE_AP_IS_ENABLED(state)){
-        os_printf("wifi AP is not enabled, state = %d\r\n", state);
+        bl_os_printf("wifi AP is not enabled, state = %d\r\n", state);
         return;
     }
 
     wifi_mgmr_ap_sta_cnt_get(&sta_cnt);
     if (!sta_cnt){
-        os_printf("no sta connect current AP, sta_cnt = %d\r\n", sta_cnt);
+        bl_os_printf("no sta connect current AP, sta_cnt = %d\r\n", sta_cnt);
         return;
     }
 
     memset(&sta_info, 0, sizeof(struct wifi_sta_basic_info));
-    os_printf("sta list:\r\n");
-    os_printf("-----------------------------------------------------------------------------------\r\n");
-    os_printf("No.      StaIndex      Mac-Address       Signal      DateRate            TimeStamp\r\n");
-    os_printf("-----------------------------------------------------------------------------------\r\n");
+    bl_os_printf("sta list:\r\n");
+    bl_os_printf("-----------------------------------------------------------------------------------\r\n");
+    bl_os_printf("No.      StaIndex      Mac-Address       Signal      DateRate            TimeStamp\r\n");
+    bl_os_printf("-----------------------------------------------------------------------------------\r\n");
     for(i = 0;i < sta_cnt;i++){
         wifi_mgmr_ap_sta_info_get(&sta_info, i);
         if (!sta_info.is_used || (sta_info.sta_idx == 0xef)){
@@ -126,7 +124,7 @@ static void wifi_ap_sta_list_get_cmd(char *buf, int len, int argc, char **argv)
             }
         }
 
-        os_printf(" %u       "
+        bl_os_printf(" %u       "
             "   %u        "
             "%02X:%02X:%02X:%02X:%02X:%02X    "
             "%d      "
@@ -156,34 +154,34 @@ static void wifi_ap_sta_delete_cmd(char *buf, int len, int argc, char **argv)
     uint8_t sta_num = 0;
 
     if (2 != argc) {
-        os_printf("[USAGE]: %s sta_num\r\n", argv[0]);
+        bl_os_printf("[USAGE]: %s sta_num\r\n", argv[0]);
         return;
     }
 
     wifi_mgmr_state_get(&state);
     if (!WIFI_STATE_AP_IS_ENABLED(state)){
-        os_printf("wifi AP is not enabled, state = %d\r\n", state);
+        bl_os_printf("wifi AP is not enabled, state = %d\r\n", state);
         return;
     }
 
-    os_printf("Delete Sta No.%s \r\n", argv[1]);
+    bl_os_printf("Delete Sta No.%s \r\n", argv[1]);
     chan_str_to_hex(&sta_num, argv[1]);
-    os_printf("sta num = %d \r\n", sta_num);
+    bl_os_printf("sta num = %d \r\n", sta_num);
 
     wifi_mgmr_ap_sta_cnt_get(&sta_cnt);
     if (!sta_cnt || (sta_num > sta_cnt)){
-        os_printf("no valid sta in list or sta idx(%d) is invalid\r\n", sta_cnt);
+        bl_os_printf("no valid sta in list or sta idx(%d) is invalid\r\n", sta_cnt);
         return;
     }
 
     memset(&sta_info, 0, sizeof(struct wifi_sta_basic_info));
     wifi_mgmr_ap_sta_info_get(&sta_info, sta_num);
     if (!sta_info.is_used || (sta_info.sta_idx == 0xef)){
-        os_printf("No.%d sta is invalid\r\n", sta_num);
+        bl_os_printf("No.%d sta is invalid\r\n", sta_num);
         return;
     }
 
-    os_printf("sta info: No.%u,"
+    bl_os_printf("sta info: No.%u,"
         "sta_idx = %u,"
         "mac = %02X:%02X:%02X:%02X:%02X:%02X,"
         "rssi = %d"
@@ -206,29 +204,29 @@ static void wifi_edca_dump_cmd(char *buf, int len, int argc, char **argv)
     uint8_t aifs = 0, cwmin = 0, cwmax = 0;
     uint16_t txop = 0;
 
-    puts("EDCA Statistic:\r\n");
+    bl_os_puts("EDCA Statistic:\r\n");
 
-    bl60x_edca_get(API_AC_BK, &aifs, &cwmin, &cwmax, &txop);
-    puts("  AC_BK:");
-    os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
+    tg710x_edca_get(API_AC_BK, &aifs, &cwmin, &cwmax, &txop);
+    bl_os_puts("  AC_BK:");
+    bl_os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
         aifs, cwmin, cwmax, txop
     );
 
-    bl60x_edca_get(API_AC_BE, &aifs, &cwmin, &cwmax, &txop);
-    puts("  AC_BE:");
-    os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
+    tg710x_edca_get(API_AC_BE, &aifs, &cwmin, &cwmax, &txop);
+    bl_os_puts("  AC_BE:");
+    bl_os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
         aifs, cwmin, cwmax, txop
     );
 
-    bl60x_edca_get(API_AC_VI, &aifs, &cwmin, &cwmax, &txop);
-    puts("  AC_VI:");
-    os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
+    tg710x_edca_get(API_AC_VI, &aifs, &cwmin, &cwmax, &txop);
+    bl_os_puts("  AC_VI:");
+    bl_os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
         aifs, cwmin, cwmax, txop
     );
 
-    bl60x_edca_get(API_AC_VO, &aifs, &cwmin, &cwmax, &txop);
-    puts("  AC_VO:");
-    os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
+    tg710x_edca_get(API_AC_VO, &aifs, &cwmin, &cwmax, &txop);
+    bl_os_puts("  AC_VO:");
+    bl_os_printf("aifs %3u, cwmin %3u, cwmax %3u, txop %4u\r\n",
         aifs, cwmin, cwmax, txop
     );
 }
@@ -241,49 +239,50 @@ int wifi_mgmr_cli_powersaving_on()
 
 int wifi_mgmr_cli_scanlist_num(int *num)
 {
-  int i, j;
+    int i, j;
 
-  for (i = 0, j = 0; i < sizeof(wifiMgmr.scan_items) / sizeof(wifiMgmr.scan_items[0]); i++) {
-    if (wifiMgmr.scan_items[i].is_used) {
-      j++;
+    for (i = 0, j = 0; i < sizeof(wifiMgmr.scan_items) / sizeof(wifiMgmr.scan_items[0]); i++) {
+        if (wifiMgmr.scan_items[i].is_used) {
+        j++;
+        }
     }
-  }
-  *num = j;
+    *num = j;
 
-  return 0;
+    return 0;
 }
 
 int wifi_mgmr_cli_scanlist_foreach(int (*cb)(void *arg1, void *arg2, char *ssid, uint8_t bssid[6], int8_t rssi, int channel, uint16_t auth),
-                                   void *arg1,
-                                   void *arg2)
+                                    void *arg1,
+                                    void *arg2)
 {
-  int i;
+    int i;
 
-  for (i = 0; i < sizeof(wifiMgmr.scan_items) / sizeof(wifiMgmr.scan_items[0]); i++) {
-    if (wifiMgmr.scan_items[i].is_used) {
-      if (cb(arg1, arg2, wifiMgmr.scan_items[i].ssid,
-             wifiMgmr.scan_items[i].bssid,
-             wifiMgmr.scan_items[i].rssi,
-             wifiMgmr.scan_items[i].channel,
-             wifiMgmr.scan_items[i].auth)) {
-        /*break on non zero*/
-        break;
-      }
+    for (i = 0; i < sizeof(wifiMgmr.scan_items) / sizeof(wifiMgmr.scan_items[0]); i++) {
+        if (wifiMgmr.scan_items[i].is_used) {
+            if (cb(arg1, arg2, wifiMgmr.scan_items[i].ssid,
+                    wifiMgmr.scan_items[i].bssid,
+                    wifiMgmr.scan_items[i].rssi,
+                    wifiMgmr.scan_items[i].channel,
+                    wifiMgmr.scan_items[i].auth)) {
+                /*break on non zero*/
+                break;
+            }
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
+
 
 int wifi_mgmr_cli_scanlist(void)
 {
     int i;
 
-    printf("cached scan list\r\n");
-    printf("****************************************************************************************************\r\n");
+    bl_os_printf("cached scan list\r\n");
+    bl_os_printf("****************************************************************************************************\r\n");
     for (i = 0; i < sizeof(wifiMgmr.scan_items)/sizeof(wifiMgmr.scan_items[0]); i++) {
         if (wifiMgmr.scan_items[i].is_used && (!wifi_mgmr_scan_item_is_timeout(&wifiMgmr, &wifiMgmr.scan_items[i]))) {
-            printf("index[%02d]: channel %02u, bssid %02X:%02X:%02X:%02X:%02X:%02X, rssi %3d, ppm abs:rel %3d : %3d, auth %20s, cipher:%12s, SSID %s\r\n",
+            bl_os_printf("index[%02d]: channel %02u, bssid %02X:%02X:%02X:%02X:%02X:%02X, rssi %3d, ppm abs:rel %3d : %3d, auth %20s, cipher:%12s, SSID %s\r\n",
                     i,
                     wifiMgmr.scan_items[i].channel,
                     wifiMgmr.scan_items[i].bssid[0],
@@ -300,16 +299,16 @@ int wifi_mgmr_cli_scanlist(void)
                     wifiMgmr.scan_items[i].ssid
             );
         } else {
-            printf("index[%02d]: empty\r\n", i);
+            bl_os_printf("index[%02d]: empty\r\n", i);
         }
     }
-    printf("----------------------------------------------------------------------------------------------------\r\n");
+    bl_os_printf("----------------------------------------------------------------------------------------------------\r\n");
     return 0;
 }
 
 static void cmd_rf_dump(char *buf, int len, int argc, char **argv)
 {
-    //bl60x_fw_dump_data();
+    //tg710x_fw_dump_data();
 }
 
 static void wifi_capcode_cmd(char *buf, int len, int argc, char **argv)
@@ -317,19 +316,19 @@ static void wifi_capcode_cmd(char *buf, int len, int argc, char **argv)
     int capcode = 0;
 
     if (2 != argc && 1 != argc) {
-        os_printf("Usage: %s capcode\r\n", argv[0]);
+        bl_os_printf("Usage: %s capcode\r\n", argv[0]);
         return;
     }
 
     /*get capcode*/
     if (1 == argc) {
-        os_printf("Capcode %u is being used\r\n", hal_sys_capcode_get());
+        bl_os_printf("Capcode %u is being used\r\n", hal_sys_capcode_get());
         return;
     }
 
     /*set capcode*/
     capcode = atoi(argv[1]);
-    os_printf("Setting capcode to %d\r\n", capcode);
+    bl_os_printf("Setting capcode to %d\r\n", capcode);
 
     if (capcode > 0) {
         hal_sys_capcode_update(capcode, capcode);
@@ -341,37 +340,72 @@ static void wifi_bcnint_set(char *buf, int len, int argc, char **argv)
     uint16_t bcnint = 0;
 
     if (2 != argc) {
-        printf("Usage: %s bcnint\r\n", argv[0]);
+        bl_os_printf("Usage: %s bcnint\r\n", argv[0]);
         return;
     }
 
     bcnint = atoi(argv[1]);
-    printf("Setting beacon interval to %d\r\n", bcnint);
+    bl_os_printf("Setting beacon interval to %d\r\n", bcnint);
 
     if (bcnint > 0) {
         wifi_mgmr_beacon_interval_set(bcnint);
     }
 }
 
+static void _scan_channels(int channel_input_num, uint8_t channel_input[MAX_FIXED_CHANNELS_LIMIT], const char *ssid)
+{
+    int i;
+    uint16_t channel_num = 0;
+    uint16_t channels[MAX_FIXED_CHANNELS_LIMIT];
+
+    for (i = 0; i < channel_input_num; i++) {
+        channels[i] = channel_input[i];
+    }
+    channel_num = channel_input_num;
+    wifi_mgmr_scan_adv(NULL, NULL, channels, channel_num, ssid);
+
+}
+
 static void wifi_scan_cmd(char *buf, int len, int argc, char **argv)
 {
-    uint16_t channel_num;
-    uint16_t channels[MAX_FIXED_CHANNELS_LIMIT];
-    int i;
-    if (1 == argc) {
-        wifi_mgmr_scan(NULL, NULL);
-    }
-    if (argc > 1) {
-        channel_num = argc - 1;
-        if (channel_num > MAX_FIXED_CHANNELS_LIMIT) {
-            printf("---->scan fixed channels' number limit\r\n");
-            return ;
+    int opt;
+    int  channel_input_num = 0;
+    uint8_t channel_input[MAX_FIXED_CHANNELS_LIMIT];
+    const char *ssid = NULL;
+    getopt_env_t getopt_env;
+
+
+    utils_getopt_init(&getopt_env, 0);
+
+    while ((opt = utils_getopt(&getopt_env, argc, argv, "s:c:")) != -1) {
+        switch (opt) {
+            case 's':
+            {
+                ssid = getopt_env.optarg;
+                bl_os_printf("ssid: %s\r\n", ssid);
+            }
+            break;
+            case 'c':
+            {
+                utils_parse_number_adv(getopt_env.optarg, ',', channel_input, MAX_FIXED_CHANNELS_LIMIT, 10, &channel_input_num);
+            }
+            break;
+
+            default:
+            {
+                bl_os_printf("unknow option: %c\r\n", getopt_env.optopt);
+            }
         }
-        for(i = 0; i < (argc - 1); i ++) {
-            channels[i] = atoi(argv[i + 1]);
-        }
-        wifi_mgmr_scan_fixed_channels(NULL, NULL, channels, channel_num);
     }
+
+    if (channel_input_num || ssid) {
+        /*channel list specified scan*/
+        _scan_channels(channel_input_num, channel_input, ssid);
+        return;
+    }
+
+    /*normal scan*/
+    wifi_mgmr_scan(NULL, NULL);
 }
 
 static void wifi_scan_filter_cmd(char *buf, int len, int argc, char **argv)
@@ -383,7 +417,7 @@ static void wifi_scan_filter_cmd(char *buf, int len, int argc, char **argv)
     }
 
     filter = argv[1][0] == '1' ? 1 : 0;
-    blog_info("Scan Filter %s\r\n", filter ? "enable" : "disdable");
+    bl_os_log_info("Scan Filter %s\r\n", filter ? "enable" : "disdable");
     wifi_mgmr_scan_filter_hidden_ssid(filter);
 }
 
@@ -398,21 +432,21 @@ static void wifi_sta_ip_info(char *buf, int len, int argc, char **argv)
     wifi_mgmr_sta_dns_get(&dns1.addr, &dns2.addr);
     wifi_mgmr_rssi_get(&rssi);
     bl_tpc_power_table_get(power_rate_table);
-    os_printf("RSSI:   %ddbm\r\n", rssi);
-    os_printf("IP  :   %s \r\n", ip4addr_ntoa(&ip) );
-    os_printf("MASK:   %s \r\n", ip4addr_ntoa(&mask));
-    os_printf("GW  :   %s \r\n", ip4addr_ntoa(&gw));
-    os_printf("DNS1:   %s \r\n", ip4addr_ntoa(&dns1));
-    os_printf("DNS2:   %s \r\n", ip4addr_ntoa(&dns2));
-    puts(  "Power Table (dbm):\r\n");
-    puts(  "--------------------------------\r\n");
-    os_printf("  11b: %u %u %u %u             (1Mbps 2Mbps 5.5Mbps 11Mbps)\r\n",
+    bl_os_printf("RSSI:   %ddbm\r\n", rssi);
+    bl_os_printf("IP  :   %s \r\n", ip4addr_ntoa(&ip) );
+    bl_os_printf("MASK:   %s \r\n", ip4addr_ntoa(&mask));
+    bl_os_printf("GW  :   %s \r\n", ip4addr_ntoa(&gw));
+    bl_os_printf("DNS1:   %s \r\n", ip4addr_ntoa(&dns1));
+    bl_os_printf("DNS2:   %s \r\n", ip4addr_ntoa(&dns2));
+    bl_os_puts(  "Power Table (dbm):\r\n");
+    bl_os_puts(  "--------------------------------\r\n");
+    bl_os_printf("  11b: %u %u %u %u             (1Mbps 2Mbps 5.5Mbps 11Mbps)\r\n",
         power_rate_table[0],
         power_rate_table[1],
         power_rate_table[2],
         power_rate_table[3]
     );
-    os_printf("  11g: %u %u %u %u %u %u %u %u (6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps)\r\n",
+    bl_os_printf("  11g: %u %u %u %u %u %u %u %u (6Mbps 9Mbps 12Mbps 18Mbps 24Mbps 36Mbps 48Mbps 54Mbps)\r\n",
         power_rate_table[0 + 8],
         power_rate_table[1 + 8],
         power_rate_table[2 + 8],
@@ -422,7 +456,7 @@ static void wifi_sta_ip_info(char *buf, int len, int argc, char **argv)
         power_rate_table[6 + 8],
         power_rate_table[7 + 8]
     );
-    os_printf("  11n: %u %u %u %u %u %u %u %u (MCS0 ~ MCS7)\r\n",
+    bl_os_printf("  11n: %u %u %u %u %u %u %u %u (MCS0 ~ MCS7)\r\n",
         power_rate_table[0 + 16],
         power_rate_table[1 + 16],
         power_rate_table[2 + 16],
@@ -432,7 +466,7 @@ static void wifi_sta_ip_info(char *buf, int len, int argc, char **argv)
         power_rate_table[6 + 16],
         power_rate_table[7 + 16]
     );
-    puts(  "--------------------------------\r\n");
+    bl_os_puts(  "--------------------------------\r\n");
 }
 
 static uint8_t packet_raw[] = {
@@ -453,9 +487,9 @@ static void cmd_wifi_raw_send(char *buf, int len, int argc, char **argv)
     seq++;
 
     if (wifi_mgmr_raw_80211_send(packet_raw, sizeof(packet_raw))) {
-        puts("Raw send failed\r\n");
+        bl_os_puts("Raw send failed\r\n");
     } else {
-        puts("Raw send succeed\r\n");
+        bl_os_puts("Raw send succeed\r\n");
     }
 }
 
@@ -463,7 +497,7 @@ static void wifi_disconnect_cmd(char *buf, int len, int argc, char **argv)
 {
     wifi_mgmr_sta_disconnect();
     /*XXX Must make sure sta is already disconnect, otherwise sta disable won't work*/
-    bl_os_thread_delay(1000);
+    bl_os_msleep(1000);
     wifi_mgmr_sta_disable(NULL);
 }
 
@@ -479,7 +513,7 @@ static void wifi_sta_ip_set_cmd(char *buf, int len, int argc, char **argv)
     ip4_addr_t addr;
 
     if (6 != argc) {
-        puts("Illegal CMD format\r\n");
+        bl_os_puts("Illegal CMD format\r\n");
         return;
     }
     ip = ipaddr_addr(argv[1]);
@@ -490,33 +524,33 @@ static void wifi_sta_ip_set_cmd(char *buf, int len, int argc, char **argv)
 
     ip4_addr_set_u32(&addr, ip);
     ip4addr_ntoa_r(&addr, addr_str, sizeof(addr_str));
-    puts("IP  : ");
-    puts(addr_str);
-    puts("\r\n");
+    bl_os_puts("IP  : ");
+    bl_os_puts(addr_str);
+    bl_os_puts("\r\n");
 
     ip4_addr_set_u32(&addr, mask);
     ip4addr_ntoa_r(&addr, addr_str, sizeof(addr_str));
-    puts("MASK: ");
-    puts(addr_str);
-    puts("\r\n");
+    bl_os_puts("MASK: ");
+    bl_os_puts(addr_str);
+    bl_os_puts("\r\n");
 
     ip4_addr_set_u32(&addr, gw);
     ip4addr_ntoa_r(&addr, addr_str, sizeof(addr_str));
-    puts("GW  : ");
-    puts(addr_str);
-    puts("\r\n");
+    bl_os_puts("GW  : ");
+    bl_os_puts(addr_str);
+    bl_os_puts("\r\n");
 
     ip4_addr_set_u32(&addr, dns1);
     ip4addr_ntoa_r(&addr, addr_str, sizeof(addr_str));
-    puts("DNS1: ");
-    puts(addr_str);
-    puts("\r\n");
+    bl_os_puts("DNS1: ");
+    bl_os_puts(addr_str);
+    bl_os_puts("\r\n");
 
     ip4_addr_set_u32(&addr, dns2);
     ip4addr_ntoa_r(&addr, addr_str, sizeof(addr_str));
-    puts("DNS2: ");
-    puts(addr_str);
-    puts("\r\n");
+    bl_os_puts("DNS2: ");
+    bl_os_puts(addr_str);
+    bl_os_puts("\r\n");
 
     wifi_mgmr_sta_ip_set(ip, mask, gw, dns1, dns2);
 }
@@ -528,15 +562,60 @@ static void wifi_sta_ip_unset_cmd(char *buf, int len, int argc, char **argv)
 
 static void wifi_connect_cmd(char *buf, int len, int argc, char **argv)
 {
-    wifi_interface_t wifi_interface;
+  wifi_interface_t wifi_interface;
 
-    if (3 != argc) {
-        os_printf("[USAGE]: %s [ssid] [password]\r\n", argv[0]);
-        return;
+  getopt_env_t getopt_env;
+  int opt, open_bss_flag;
+
+  uint16_t freq = 0;
+  int bssid_set_flag = 0;
+  uint8_t mac[6] = {0};
+  open_bss_flag = 0;
+
+  if (2 > argc) {
+    goto _ERROUT;
+  }
+
+  utils_getopt_init(&getopt_env, 0);
+
+  while ((opt = utils_getopt(&getopt_env, argc, argv, "c:b:")) != -1) {
+    switch (opt) {
+    case 'c':
+      freq = atoi(getopt_env.optarg);
+      bl_os_printf("freq: %d\r\n", freq);
+      break;
+
+    case 'b':
+      bssid_set_flag = 1;
+      utils_parse_number(getopt_env.optarg, ':', mac, 6, 16);
+      bl_os_printf("bssid: %s, mac:%02X:%02X:%02X:%02X:%02X:%02X\r\n", getopt_env.optarg,
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      break;
+
+    case '?':
+      bl_os_printf("unknow option: %c\r\n", getopt_env.optopt);
+      goto _ERROUT;
     }
+  }
 
-    wifi_interface = wifi_mgmr_sta_enable();
-    wifi_mgmr_sta_connect(wifi_interface, argv[1], argv[2], NULL, NULL, 0, 0);
+  if (getopt_env.optind >= argc || argc - getopt_env.optind < 1) {
+		bl_os_printf("Expected ssid and password\r\n");
+		goto _ERROUT;
+  }
+
+  bl_os_printf("connect wifi ssid:%s, psk:%s, bssid:%d, freq:%d\r\n", argv[getopt_env.optind], argv[getopt_env.optind+1], bssid_set_flag, freq);
+  if (NULL == argv[getopt_env.optind + 1]) {
+      open_bss_flag = 1;
+  }
+
+  wifi_interface = wifi_mgmr_sta_enable();
+  wifi_mgmr_sta_connect(wifi_interface, argv[getopt_env.optind], open_bss_flag ? NULL : argv[getopt_env.optind+1], NULL, bssid_set_flag ? mac : NULL, 0, freq);
+
+  return;
+
+_ERROUT:
+  bl_os_printf("[USAGE]: %s [-c <freq>] [-b <bssid>] <ssid> [password]\r\n", argv[0]);
+  return;
 }
 
 static void wifi_sta_get_state_cmd(char *buf, int len, int argc, char **argv)
@@ -545,39 +624,39 @@ static void wifi_sta_get_state_cmd(char *buf, int len, int argc, char **argv)
 
     wifi_mgmr_state_get(&state);
 
-    os_printf("%s:wifi state = 0x%x\r\n", __func__, state);
+    bl_os_printf("%s:wifi state = 0x%x\r\n", __func__, state);
     if(state == WIFI_STATE_UNKNOWN){
-        os_printf("wifi current state: WIFI_STATE_UNKNOWN\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_UNKNOWN\r\n");
     } else if(state == WIFI_STATE_IDLE) {
-        os_printf("wifi current state: WIFI_STATE_IDLE\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_IDLE\r\n");
     } else if(state == WIFI_STATE_CONNECTING) {
-        os_printf("wifi current state: WIFI_STATE_CONNECTING\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_CONNECTING\r\n");
     } else if(state == WIFI_STATE_CONNECTED_IP_GETTING) {
-        os_printf("wifi current state: WIFI_STATE_CONNECTED_IP_GETTING\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_CONNECTED_IP_GETTING\r\n");
     } else if(state == WIFI_STATE_CONNECTED_IP_GOT) {
-        os_printf("wifi current state: WIFI_STATE_CONNECTED_IP_GOT\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_CONNECTED_IP_GOT\r\n");
     } else if(state == WIFI_STATE_DISCONNECT) {
-        os_printf("wifi current state: WIFI_STATE_DISCONNECT\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_DISCONNECT\r\n");
     } else if(state == WIFI_STATE_WITH_AP_IDLE) {
-        os_printf("wifi current state: WIFI_STATE_WITH_AP_IDLE\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_WITH_AP_IDLE\r\n");
     } else if(state == WIFI_STATE_WITH_AP_CONNECTING) {
-        os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTING\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTING\r\n");
     } else if(state == WIFI_STATE_WITH_AP_CONNECTED_IP_GETTING) {
-        os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTED_IP_GETTING\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTED_IP_GETTING\r\n");
     } else if(state == WIFI_STATE_WITH_AP_CONNECTED_IP_GOT) {
-        os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTED_IP_GOT\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_WITH_AP_CONNECTED_IP_GOT\r\n");
     } else if(state == WIFI_STATE_WITH_AP_DISCONNECT) {
-        os_printf("wifi current state: WIFI_STATE_WITH_AP_DISCONNECT\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_WITH_AP_DISCONNECT\r\n");
     } else if(state == WIFI_STATE_IFDOWN) {
-        os_printf("wifi current state: WIFI_STATE_IFDOWN\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_IFDOWN\r\n");
     } else if(state == WIFI_STATE_SNIFFER) {
-        os_printf("wifi current state: WIFI_STATE_SNIFFER\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_SNIFFER\r\n");
     } else if(state == WIFI_STATE_PSK_ERROR) {
-        os_printf("wifi current state: WIFI_STATE_PSK_ERROR\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_PSK_ERROR\r\n");
     } else if(state == WIFI_STATE_NO_AP_FOUND) {
-        os_printf("wifi current state: WIFI_STATE_NO_AP_FOUND\r\n");
+        bl_os_printf("wifi current state: WIFI_STATE_NO_AP_FOUND\r\n");
     } else {
-        os_printf("wifi current state: invalid\r\n");
+        bl_os_printf("wifi current state: invalid\r\n");
     }
 }
 
@@ -599,14 +678,14 @@ static void wifi_rc_fixed_enable(char *buf, int len, int argc, char **argv)
     uint16_t rc = 0x0000; //format mode is HT_MF only
 
     if (argc != 4) {
-        os_printf("rc_fix_en [b/g/n] [MCS] [GI]");
+        bl_os_printf("rc_fix_en [b/g/n] [MCS] [GI]");
         return;
     }
     mode = atoi(argv[1]);
     mcs = atoi(argv[2]);
     gi = atoi(argv[3]);
 
-    os_printf("wifi set mode:%s, mcs:%d, gi:%d\r\n", (mode == 1?"n mode":"b/g mdoe"), mcs, gi);
+    bl_os_printf("wifi set mode:%s, mcs:%d, gi:%d\r\n", (mode == 1?"n mode":"b/g mdoe"), mcs, gi);
 
     if (mode == 1) {
         rc |= mode << 12 | gi << 9 | mcs;
@@ -614,7 +693,7 @@ static void wifi_rc_fixed_enable(char *buf, int len, int argc, char **argv)
         rc |= (1 << 9) | (1 << 10) | mcs;
     }
 
-    os_printf("wifi rc:0x%x\r\n", rc);
+    bl_os_printf("wifi rc:0x%x\r\n", rc);
 
     wifi_mgmr_rate_config(rc);
 }
@@ -632,23 +711,23 @@ static void wifi_capcode_update(char *buf, int len, int argc, char **argv)
     uint8_t cap_in, cap_out;
 
     if (argc == 1) {
-        bl60x_fw_xtal_capcode_get(&cap_in, &cap_out);
-        printf("[RF] [CAP] Dump capcode in:out %u:%u\r\n", cap_in, cap_out);
+        tg710x_fw_xtal_capcode_get(&cap_in, &cap_out);
+        bl_os_printf("[RF] [CAP] Dump capcode in:out %u:%u\r\n", cap_in, cap_out);
         return;
     }
     if (argc != 3) {
-        printf("%s [capcode_in] [capcode_out]\r\n", argv[0]);
+        bl_os_printf("%s [capcode_in] [capcode_out]\r\n", argv[0]);
         return;
     }
 
-    bl60x_fw_xtal_capcode_get(&cap_in, &cap_out);
-    printf("[RF] [CAP] Dump capcode in:out %u:%u\r\n", cap_in, cap_out);
+    tg710x_fw_xtal_capcode_get(&cap_in, &cap_out);
+    bl_os_printf("[RF] [CAP] Dump capcode in:out %u:%u\r\n", cap_in, cap_out);
     cap_in = atoi(argv[1]);
     cap_out = atoi(argv[2]);
-    printf("[RF] [CAP] Updating capcode to in:out %u:%u\r\n", cap_in, cap_out);
-    bl60x_fw_xtal_capcode_update(cap_in, cap_out);
-    bl60x_fw_xtal_capcode_get(&cap_in, &cap_out);
-    printf("[RF] [CAP] Dump Again capcode in:out %u:%u\r\n", cap_in, cap_out);
+    bl_os_printf("[RF] [CAP] Updating capcode to in:out %u:%u\r\n", cap_in, cap_out);
+    tg710x_fw_xtal_capcode_update(cap_in, cap_out);
+    tg710x_fw_xtal_capcode_get(&cap_in, &cap_out);
+    bl_os_printf("[RF] [CAP] Dump Again capcode in:out %u:%u\r\n", cap_in, cap_out);
 }
 #endif
 
@@ -664,12 +743,40 @@ static void wifi_denoise_disable_cmd(char *buf, int len, int argc, char **argv)
 
 static void wifi_power_saving_on_cmd(char *buf, int len, int argc, char **argv)
 {
-    wifi_mgmr_sta_powersaving(2);
+
+    uint8_t mode;
+    if (1 == argc) {
+        /*default mode:MESH*/
+        wifi_mgmr_sta_ps_enter(WIFI_COEX_PM_STA_MESH);
+    } else if(2 == argc) {
+        mode = atoi(argv[1]);
+        if (mode >= WIFI_COEX_PM_MAX) {
+            return;
+        }
+        bl_os_printf("set ps mode:%d\r\n", mode);
+        wifi_mgmr_sta_ps_enter(mode);
+    }
 }
 
 static void wifi_power_saving_off_cmd(char *buf, int len, int argc, char **argv)
 {
-    wifi_mgmr_sta_powersaving(0);
+    wifi_mgmr_sta_ps_exit();
+}
+
+static void wifi_power_saving_set(char *buf, int len, int argc, char **argv)
+{
+    uint16_t  ms = 0;
+
+    if (2 != argc) {
+        return;
+    }
+
+    ms = atoi(argv[1]);
+    bl_os_printf("Setting wifi ps acitve to %d\r\n", ms);
+
+    if (ms > 0) {
+        wifi_mgmr_set_wifi_active_time(ms);
+    }
 }
 
 static void sniffer_cb(void *env, uint8_t *pkt, int len)
@@ -681,11 +788,11 @@ static void sniffer_cb(void *env, uint8_t *pkt, int len)
     (void)sniffer_counter;
 
     sniffer_counter++;
-    if ((int)bl_os_tick_get() - (int)last_tick > 10 * 1000) {
-        blog_info("[SNIFFER] PKT Number is %d\r\n",
+    if ((int)bl_os_get_tick() - (int)last_tick > 10 * 1000) {
+        bl_os_log_info("[SNIFFER] PKT Number is %d\r\n",
                 (int)sniffer_counter - (int)sniffer_last
         );
-        last_tick = bl_os_tick_get();
+        last_tick = bl_os_get_tick();
         sniffer_last = sniffer_counter;
     }
 }
@@ -693,10 +800,10 @@ static void sniffer_cb(void *env, uint8_t *pkt, int len)
 static void wifi_mon_cmd(char *buf, int len, int argc, char **argv)
 {
     if (argc > 1) {
-        blog_debug("Enable Sniffer Mode\r\n");
+        bl_os_log_debug("Enable Sniffer Mode\r\n");
         wifi_mgmr_sniffer_enable();
     } else {
-        blog_debug("Register Sniffer cb\r\n");
+        bl_os_log_debug("Register Sniffer cb\r\n");
         wifi_mgmr_sniffer_register(NULL, sniffer_cb);
     }
 }
@@ -747,7 +854,7 @@ static void cmd_wifi_ap_start(char *buf, int len, int argc, char **argv)
 static void cmd_wifi_ap_stop(char *buf, int len, int argc, char **argv)
 {
     wifi_mgmr_ap_stop(NULL);
-    os_printf("--->>> cmd_wifi_ap_stop\r\n");
+    bl_os_printf("--->>> cmd_wifi_ap_stop\r\n");
 }
 
 static void cmd_wifi_ap_conf_max_sta(char *buf, int len, int argc, char **argv)
@@ -755,12 +862,12 @@ static void cmd_wifi_ap_conf_max_sta(char *buf, int len, int argc, char **argv)
     int max_sta_supported;
 
     if (2 != argc) {
-        os_printf("Usage: wifi_ap_max_sta [num]\r\n");
+        bl_os_printf("Usage: wifi_ap_max_sta [num]\r\n");
         return;
     }
 
     max_sta_supported = atoi(argv[1]);
-    os_printf("Conf Max Sta to %d\r\n", max_sta_supported);
+    bl_os_printf("Conf Max Sta to %d\r\n", max_sta_supported);
 
     wifi_mgmr_conf_max_sta(max_sta_supported);
 }
@@ -768,15 +875,15 @@ static void cmd_wifi_ap_conf_max_sta(char *buf, int len, int argc, char **argv)
 static void cmd_wifi_dump(char *buf, int len, int argc, char **argv)
 {
     if (argc > 1) {
-        puts("[CLI] Dump statistic use forced mode\r\n");
-        os_critical_enter();
-        bl60x_fw_dump_statistic(1);
-        os_critical_exit();
+        bl_os_puts("[CLI] Dump statistic use forced mode\r\n");
+        bl_os_enter_critical();
+        tg710x_fw_dump_statistic(1);
+        bl_os_exit_critical();
     } else {
-        puts("[CLI] Dump statistic use normal mode\r\n");
-        os_critical_enter();
-        bl60x_fw_dump_statistic(0);
-        os_critical_exit();
+        bl_os_puts("[CLI] Dump statistic use normal mode\r\n");
+        bl_os_enter_critical();
+        tg710x_fw_dump_statistic(0);
+        bl_os_exit_critical();
     }
 }
 
@@ -817,52 +924,45 @@ static void cmd_wifi_cfg(char *buf, int len, int argc, char **argv)
                 val[0] = atoi(getopt_env.optarg);
                 break;
             case '?':
-                os_printf("%s: unknown option %c\r\n", *argv, getopt_env.optopt);
+                bl_os_printf("%s: unknown option %c\r\n", *argv, getopt_env.optopt);
                 return;
         }
     }
 
-    os_printf("Target CFG Element Info, task: %lu, element %lu, type %lu, val %lu\r\n",
+    bl_os_printf("Target CFG Element Info, task: %lu, element %lu, type %lu, val %lu\r\n",
         task, element, type, val[0]
     );
     switch (ops) {
         case CFG_ELEMENT_TYPE_OPS_SET:
         {
-            os_printf("    OPS: %s\r\n", "set");
+            bl_os_printf("    OPS: %s\r\n", "set");
             wifi_mgmr_cfg_req(CFG_ELEMENT_TYPE_OPS_SET, task, element, type, sizeof(val), val);
         }
         break;
         case CFG_ELEMENT_TYPE_OPS_GET:
         {
-            os_printf("    OPS: %s\r\n", "get");
+            bl_os_printf("    OPS: %s\r\n", "get");
             wifi_mgmr_cfg_req(CFG_ELEMENT_TYPE_OPS_GET, task, element, type, sizeof(val), val);
         }
         break;
         case CFG_ELEMENT_TYPE_OPS_RESET:
         {
-            os_printf("    OPS: %s\r\n", "reset");
+            bl_os_printf("    OPS: %s\r\n", "reset");
             wifi_mgmr_cfg_req(CFG_ELEMENT_TYPE_OPS_RESET, task, element, 0, 0, NULL);
         }
         break;
         case CFG_ELEMENT_TYPE_OPS_DUMP_DEBUG:
         {
-            os_printf("    OPS: %s\r\n", "dump");
+            bl_os_printf("    OPS: %s\r\n", "dump");
             wifi_mgmr_cfg_req(CFG_ELEMENT_TYPE_OPS_DUMP_DEBUG, 0, 0, 0, 0, NULL);
         }
         break;
         case CFG_ELEMENT_TYPE_OPS_UNKNOWN:
         {
-            os_printf("UNKNOWN OPS\r\n");
+            bl_os_printf("UNKNOWN OPS\r\n");
         }
         break;
     }
-}
-
-static void cmd_wifi_mib(char *buf, int len, int argc, char **argv)
-{
-void hal_mib_dump();
-    hal_mib_dump();
-    utils_hexdump(argv[0], 30);
 }
 
 static int pkt_counter = 0;
@@ -913,6 +1013,19 @@ static void cmd_wifi_coex_pta_force_off(char *buf, int len, int argc, char **arg
     coex_wifi_pta_forece_enable(0);
 }
 
+static void cmd_wifi_coex_pta_set(char *buf, int len, int argc, char **argv)
+{
+    uint32_t i = 0;
+    if (2 != argc) {
+        printf("[USAGE]: %s wifi_coex_pta_set \r\n", argv[0]);
+        return;
+    }
+
+    i = atoi(argv[1]);
+
+int coex_pta_force_autocontrol_set(void *arg);
+    coex_pta_force_autocontrol_set((void *)i);
+}
 static void cmd_wifi_state_get(char *buf, int len, int argc, char **argv)
 {
     int state = WIFI_STATE_UNKNOWN;
@@ -920,49 +1033,49 @@ static void cmd_wifi_state_get(char *buf, int len, int argc, char **argv)
 
     switch (state) {
         case WIFI_STATE_UNKNOWN:
-            os_printf("wifi state unknown\r\n");
+            bl_os_printf("wifi state unknown\r\n");
             break;
         case WIFI_STATE_IDLE:
-            os_printf("wifi state idle\r\n");
+            bl_os_printf("wifi state idle\r\n");
             break;
         case WIFI_STATE_CONNECTING:
-            os_printf("wifi state connecting\r\n");
+            bl_os_printf("wifi state connecting\r\n");
             break;
         case WIFI_STATE_CONNECTED_IP_GETTING:
-            os_printf("wifi state connected ip getting\r\n");
+            bl_os_printf("wifi state connected ip getting\r\n");
             break;
         case WIFI_STATE_CONNECTED_IP_GOT:
-            os_printf("wifi state connected ip got\r\n");
+            bl_os_printf("wifi state connected ip got\r\n");
             break;
         case WIFI_STATE_DISCONNECT:
-            os_printf("wifi state disconnect\r\n");
+            bl_os_printf("wifi state disconnect\r\n");
             break;
         case WIFI_STATE_WITH_AP_IDLE:
-            os_printf("wifi state with ap idle\r\n");
+            bl_os_printf("wifi state with ap idle\r\n");
             break;
         case WIFI_STATE_WITH_AP_CONNECTING:
-            os_printf("wifi state with ap connecting\r\n");
+            bl_os_printf("wifi state with ap connecting\r\n");
             break;
         case WIFI_STATE_WITH_AP_CONNECTED_IP_GETTING:
-            os_printf("wifi state with ap connected ip getting\r\n");
+            bl_os_printf("wifi state with ap connected ip getting\r\n");
             break;
         case WIFI_STATE_WITH_AP_CONNECTED_IP_GOT:
-            os_printf("wifi state with ap connected ip got\r\n");
+            bl_os_printf("wifi state with ap connected ip got\r\n");
             break;
         case WIFI_STATE_WITH_AP_DISCONNECT:
-            os_printf("wifi state with ap disconnect\r\n");
+            bl_os_printf("wifi state with ap disconnect\r\n");
             break;
         case WIFI_STATE_IFDOWN:
-            os_printf("wifi state ifdown\r\n");
+            bl_os_printf("wifi state ifdown\r\n");
             break;
         case WIFI_STATE_SNIFFER:
-            os_printf("wifi state sniffer\r\n");
+            bl_os_printf("wifi state sniffer\r\n");
             break;
         case WIFI_STATE_PSK_ERROR:
-            os_printf("wifi state psk error\r\n");
+            bl_os_printf("wifi state psk error\r\n");
             break;
         case WIFI_STATE_NO_AP_FOUND:
-            os_printf("wifi state no ap found\r\n");
+            bl_os_printf("wifi state no ap found\r\n");
             break;
         default:
             break;
@@ -1002,6 +1115,7 @@ const static struct cli_command cmds_user[] STATIC_CLI_CMD_ATTRIBUTE = {
         { "rc_fix_dis", "wifi rate control fixed rate diable", wifi_rc_fixed_disable},
         { "wifi_sta_ps_on", "wifi power saving mode ON", wifi_power_saving_on_cmd},
         { "wifi_sta_ps_off", "wifi power saving mode OFF", wifi_power_saving_off_cmd},
+        { "wifi_sta_ps_set", "set wifi ps mode active time", wifi_power_saving_set},
         { "wifi_sta_denoise_enable", "wifi denoise", wifi_denoise_enable_cmd},
         { "wifi_sta_denoise_disable", "wifi denoise", wifi_denoise_disable_cmd},
         { "wifi_sniffer_on", "wifi sniffer mode on", wifi_sniffer_on_cmd},
@@ -1011,14 +1125,14 @@ const static struct cli_command cmds_user[] STATIC_CLI_CMD_ATTRIBUTE = {
         { "wifi_ap_conf_max_sta", "config Ap max sta", cmd_wifi_ap_conf_max_sta},
         { "wifi_dump", "dump fw statistic", cmd_wifi_dump},
         { "wifi_cfg", "wifi cfg cmd", cmd_wifi_cfg},
-        { "wifi_mib", "dump mib statistic", cmd_wifi_mib},
         { "wifi_pkt", "wifi dump needed", cmd_dump_reset},
-        { "wifi_coex_rf_force_on", "wifi coex RF force on", cmd_wifi_coex_rf_force_on},
-        { "wifi_coex_rf_force_off", "wifi coex RF force off", cmd_wifi_coex_rf_force_off},
-        { "wifi_coex_pti_force_on", "wifi coex PTI force on", cmd_wifi_coex_pti_force_on},
-        { "wifi_coex_pti_force_off", "wifi coex PTI force off", cmd_wifi_coex_pti_force_off},
-        { "wifi_coex_pta_force_on", "wifi coex PTA force on", cmd_wifi_coex_pta_force_on},
-        { "wifi_coex_pta_force_off", "wifi coex PTA force off", cmd_wifi_coex_pta_force_off},
+        { "wifi_coex_rf_force_on", "wifi coex RF forece on", cmd_wifi_coex_rf_force_on},
+        { "wifi_coex_rf_force_off", "wifi coex RF forece off", cmd_wifi_coex_rf_force_off},
+        { "wifi_coex_pti_force_on", "wifi coex PTI forece on", cmd_wifi_coex_pti_force_on},
+        { "wifi_coex_pti_force_off", "wifi coex PTI forece off", cmd_wifi_coex_pti_force_off},
+        { "wifi_coex_pta_force_on", "wifi coex PTA forece on", cmd_wifi_coex_pta_force_on},
+        { "wifi_coex_pta_force_off", "wifi coex PTA forece off", cmd_wifi_coex_pta_force_off},
+        { "wifi_coex_pta_set", "wifi coex PTA set", cmd_wifi_coex_pta_set},
         { "wifi_sta_list", "get sta list in AP mode", wifi_ap_sta_list_get_cmd},
         { "wifi_sta_del", "delete one sta in AP mode", wifi_ap_sta_delete_cmd},
         { "wifi_edca_dump", "dump EDCA data", wifi_edca_dump_cmd},

@@ -36,7 +36,7 @@
     #else // only for test
         #define NUM_OF_TIMER_PROPERTYS 14 /*  */
         // const char *propertys_list[NUM_OF_TIMER_PROPERTYS] = { "testEnum", "testFloat", "testInt", "powerstate", "allPowerstate" };
-        const char *propertys_list[NUM_OF_TIMER_PROPERTYS] = { "powerstate", "allPowerstate", "mode", "powerstate_1", "brightness", "PowerSwitch", "powerstate_2",
+        const char *propertys_list[NUM_OF_TIMER_PROPERTYS] = { "powerstate", "allPowerstate", "PowerSwitch", "mode", "powerstate_1", "brightness", "powerstate_2",
                     "powerstate_3", "heaterPower", "windspeed", "angleLR", "testEnum", "testFloat", "testInt" };
         typedef enum {
             T_INT = 1,
@@ -79,15 +79,21 @@ static void timer_service_cb(const char *report_data, const char *property_name,
 
     // if (report_data != NULL)	/* post property to cloud */
     //     user_post_property_json(report_data);
+    user_example_ctx_t *user_example_ctx = user_example_get_ctx();
     if (property_name != NULL) {	/* set value to device */
         LOG_TRACE("timer event callback=%s val=%s", property_name, data);
+        char *property = device_timer_post(0);
+        if (property != NULL) {
+            IOT_Linkkit_Report(user_example_ctx->master_devid, ITM_MSG_POST_PROPERTY, property, strlen(property));
+            HAL_Free(property);
+        }
         #ifdef MULTI_ELEMENT_TEST
     	char property_payload[128] = {0};
-        user_example_ctx_t *user_example_ctx = user_example_get_ctx();
-        if (strcmp(propertys_list[0], property_name) != 0 && strcmp(propertys_list[1], property_name) != 0) {
+        if (strcmp(propertys_list[0], property_name) != 0 && strcmp(propertys_list[1], property_name) != 0 && strcmp(propertys_list[2], property_name) != 0) {
             snprintf(property_payload, sizeof(property_payload), "{\"%s\":%s}", property_name, data);
             IOT_Linkkit_Report(user_example_ctx->master_devid, ITM_MSG_POST_PROPERTY,
                     property_payload, strlen(property_payload));
+
             return;
         }
         else
@@ -197,7 +203,9 @@ static void user_deviceinfo_update(void)
 void user_post_property_after_connected(void);
 
 #if (defined (TG7100CEVB))
-extern int wifi_mgmr_sta_powersaving(int ps);
+// extern int wifi_mgmr_sta_powersaving(int ps);
+int wifi_mgmr_sta_ps_enter(uint32_t ps_level);
+int wifi_mgmr_sta_ps_exit(void);
 #endif
 static int user_connected_event_handler(void)
 {
@@ -205,7 +213,10 @@ static int user_connected_event_handler(void)
 
     LOG_TRACE("Cloud Connected");
 #if (defined (TG7100CEVB))
-        wifi_mgmr_sta_powersaving(2);
+        // wifi_mgmr_sta_powersaving(2);
+    #ifdef TG7100C_POWERSAVE_ENABLE
+        wifi_mgmr_sta_ps_enter(3);
+    #endif
 #endif
     user_example_ctx->cloud_connected = 1;
 #ifdef EN_COMBO_NET
@@ -225,7 +236,10 @@ static int user_disconnected_event_handler(void)
 
     LOG_TRACE("Cloud Disconnected");
 #if (defined (TG7100CEVB))
-        wifi_mgmr_sta_powersaving(0);
+        // wifi_mgmr_sta_powersaving(0);
+    #ifdef TG7100C_POWERSAVE_ENABLE
+        wifi_mgmr_sta_ps_exit();
+    #endif
 #endif
     set_net_state(CONNECT_CLOUD_FAILED);
     user_example_ctx->cloud_connected = 0;

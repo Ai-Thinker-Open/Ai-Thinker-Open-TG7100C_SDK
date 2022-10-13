@@ -170,6 +170,15 @@ typedef struct hal_wifi_link_info_s
     int8_t rssi; /* rssi value of received packet */
 } hal_wifi_link_info_t;
 
+/* WiFi&BT combo chip's coexistence mode */
+typedef enum{
+    WIFI_COEXMODE_NONE,                    /* wifi combo chip none coexistence mode */
+    WIFI_COEXMODE_WIFI_ONLY,               /* wifi combo chip only wifi mode, ble mesh force closed */
+    WIFI_COEXMODE_BLE_ONLY,                /* wifi combo chip only ble&mesh mode, wifi force closed */
+    WIFI_COEXMODE_WIFI_MESH,               /* wifi combo chip ble-mesh & wifi RF coexistence */
+    WIFI_COEXMODE_MAX
+} hal_wifi_coexmode_t;
+
 /*
  * The event call back function called at specific events occurred.
  *
@@ -227,6 +236,9 @@ struct hal_wifi_module_s
     int  (*start_ap)(hal_wifi_module_t *m, const char *ssid, const char *passwd, int interval, int hide);
     int  (*stop_ap)(hal_wifi_module_t *m);
 
+    /* wifi & ble coexistence related */
+    int (*coex_mode_set)(hal_wifi_module_t *m, hal_wifi_coexmode_t coex_mode);
+    int (*coex_param_set)(hal_wifi_module_t *m, hal_wifi_coexmode_t coex_mode, uint16_t param1, uint16_t param2);
     /* debug related */
     void (*start_debug_mode)(hal_wifi_module_t *m);
     void (*stop_debug_mode)(hal_wifi_module_t *m);

@@ -14,7 +14,7 @@ int wifi_mgmr_api_common(wifi_mgmr_msg_t *msg, WIFI_MGMR_EVENT_T ev, void *data1
     msg->data2 = data2;
     msg->len = len;
 
-    wifi_mgmr_event_notify(msg);
+    wifi_mgmr_event_notify(msg, 1);
 
     return 0;
 }
@@ -28,12 +28,26 @@ int wifi_mgmr_api_common_msg(WIFI_MGMR_EVENT_T ev, void *data1, void *data2)
     msg.data2 = data2;
     msg.len = sizeof (wifi_mgmr_msg_t);
 
-    wifi_mgmr_event_notify(&msg);
+    wifi_mgmr_event_notify(&msg, 1);
 
     return 0;
 }
 
-int wifi_mgmr_api_connect(char *ssid, char *psk, char *pmk, uint8_t *mac, uint8_t band, uint16_t freq)
+int wifi_mgmr_api_try_to_wakeup(WIFI_MGMR_EVENT_T ev, void *data1, void *data2)
+{
+    wifi_mgmr_msg_t msg;
+
+    msg.ev = ev;
+    msg.data1 = data1;
+    msg.data2 = data2;
+    msg.len = sizeof (wifi_mgmr_msg_t);
+
+    wifi_mgmr_event_notify(&msg, 0);
+
+    return 0;
+}
+
+int wifi_mgmr_api_connect(char *ssid, char *passphr, const ap_connect_adv_t *ext_param)
 {
     wifi_mgmr_msg_t *msg;
     wifi_mgmr_profile_msg_t *profile;
@@ -43,33 +57,50 @@ int wifi_mgmr_api_connect(char *ssid, char *psk, char *pmk, uint8_t *mac, uint8_
     msg = (wifi_mgmr_msg_t*)buffer;
 
     profile = (wifi_mgmr_profile_msg_t*)msg->data;
+
     profile->ssid_len = strlen(ssid);//ssid should never be NULL
     memcpy(profile->ssid, ssid, profile->ssid_len);
     profile->ssid_tail[0] = '\0';
-    profile->psk_len = psk ? strlen(psk) : 0;//psk can be NULL
-    if (profile->psk_len > sizeof(profile->psk)) {
+
+    profile->passphr_len = passphr ? strlen(passphr) : 0;//passphr can be NULL
+    if (profile->passphr_len > sizeof(profile->passphr)) {
         return -1;
-    } else if (profile->psk_len > 0) {
-        memcpy(profile->psk, psk, profile->psk_len);
+    } else if (profile->passphr_len > 0) {
+        memcpy(profile->passphr, passphr, profile->passphr_len);
     }
-    profile->psk_tail[0] = '\0';
-    profile->pmk_len = pmk ? strlen(pmk) : 0;//pmk can be NULL
-    if (0 != profile->pmk_len && sizeof(profile->pmk) != profile->pmk_len) {
-        return -1;
-    } else if (sizeof(profile->pmk) == profile->pmk_len) {
-        memcpy(profile->pmk, pmk, profile->pmk_len);
+    profile->passphr_tail[0] = '\0';
+
+    if (ext_param != NULL) {
+      profile->psk_len = ext_param->psk ? strlen(ext_param->psk) : 0; //psk can be NULL
+      if (0 != profile->psk_len && sizeof(profile->psk) != profile->psk_len) {
+          return -1;
+      } else if (sizeof(profile->psk) == profile->psk_len) {
+          memcpy(profile->psk, ext_param->psk, profile->psk_len);
+      }
+      profile->psk_tail[0] = '\0';
+
+      if (ext_param->ap_info.bssid) {
+          memcpy(profile->bssid, ext_param->ap_info.bssid, sizeof(profile->bssid));
+      }
+
+      if (ext_param->ap_info.freq > 0) {
+          //define the freq
+          profile->band = ext_param->ap_info.band;
+          profile->freq = ext_param->ap_info.freq;
+          bl_os_printf("wifi mgmr band:%d freq: %d\r\n", profile->band, profile->freq);
+      }
+
+      if (ext_param->ap_info.type == AP_INFO_TYPE_PRESIST) {
+        profile->ap_info_ttl = -1;
+      } else if (ext_param->ap_info.time_to_live >= 0){
+        profile->ap_info_ttl = ext_param->ap_info.time_to_live;
+      } else {
+        profile->ap_info_ttl = -1;
+        bl_os_printf("invalid ap info type or time_to_live value!\r\n");
+      }
     }
-    profile->pmk_tail[0] = '\0';
-    if (mac) {
-        memcpy(profile->mac, mac, sizeof(profile->mac));
-    }
-    if (freq > 0) {
-        //define the channel
-        profile->band = band;
-        profile->freq = freq;
-        printf("wifi mgmr band:%d freq: %d\r\n", profile->band, profile->freq);
-    }
-    profile->dhcp_use = 1;//force use DHCP currently
+
+    profile->dhcp_use = ext_param->ap_info.use_dhcp;
 
     return wifi_mgmr_api_common(
         msg,
@@ -109,38 +140,20 @@ int wifi_mgmr_api_cfg_req(uint32_t ops, uint32_t task, uint32_t element, uint32_
         WIFI_MGMR_EVENT_FW_CFG_REQ,
         (void*)0x1,
         (void*)0x2,
-        sizeof (wifi_mgmr_msg_t) + sizeof(wifi_mgmr_profile_msg_t) + length
+        sizeof (wifi_mgmr_msg_t) + sizeof(wifi_mgmr_cfg_element_msg_t) + length
     );
 }
 
-int wifi_mgmr_api_ip_got(uint32_t ip, uint32_t mask, uint32_t gw, uint32_t dns1, uint32_t dns2)
+int wifi_mgmr_api_ip_got(void)
 {
-    wifi_mgmr_msg_t *msg;
-    wifi_mgmr_ipgot_msg_t *ipgot;
-    uint8_t buffer[sizeof(wifi_mgmr_msg_t) + sizeof(wifi_mgmr_ipgot_msg_t)];//XXX caution for stack overflow
-
-    memset(buffer, 0, sizeof(buffer));
-    msg = (wifi_mgmr_msg_t*)buffer;
-
-    ipgot = (wifi_mgmr_ipgot_msg_t*)msg->data;
-    ipgot->ip = ip;
-    ipgot->mask = mask;
-    ipgot->gw = gw;
-    ipgot->dns1 = dns1;
-    ipgot->dns2 = dns2;
-
-    return wifi_mgmr_api_common(
-        msg,
-        WIFI_MGMR_EVENT_APP_IP_GOT,
-        (void*)0x1,
-        (void*)0x2,
-        sizeof(wifi_mgmr_msg_t) + sizeof(wifi_mgmr_ipgot_msg_t)
-    );
+    wifi_mgmr_pending_task_set(WIFI_MGMR_PENDING_TASK_IP_GOT_BIT);
+    return wifi_mgmr_api_try_to_wakeup(WIFI_MGMR_EVENT_GLB_MGMR_WAKEUP, (void*)0x1, (void*)0x2);
 }
 
 int wifi_mgmr_api_ip_update(void)
 {
-    return wifi_mgmr_api_common_msg(WIFI_MGMR_EVENT_GLB_IP_UPDATE, (void*)0x1, (void*)0x2);
+    wifi_mgmr_pending_task_set(WIFI_MGMR_PENDING_TASK_IP_UPDATE_BIT);
+    return wifi_mgmr_api_try_to_wakeup(WIFI_MGMR_EVENT_GLB_MGMR_WAKEUP, (void*)0x1, (void*)0x2);
 }
 
 int wifi_mgmr_api_reconnect(void)
@@ -223,19 +236,28 @@ int wifi_mgmr_api_fw_tsen_reload(void)
     return wifi_mgmr_api_common_msg(WIFI_MGMR_EVENT_APP_RELOAD_TSEN, (void*)0x1, (void*)0x2);
 }
 
-int wifi_mgmr_api_fw_scan(uint16_t *channels, uint16_t channel_num)
+int wifi_mgmr_api_fw_scan(uint16_t *channels, uint16_t channel_num, const char *scanssid)
 {
     wifi_mgmr_msg_t *msg;
-    wifi_mgmr_scan_fixed_channels_t *ch_req;
-    uint8_t buffer[sizeof(wifi_mgmr_msg_t) + sizeof(wifi_mgmr_scan_fixed_channels_t) + sizeof(ch_req->channels[0]) * MAX_FIXED_CHANNELS_LIMIT];//XXX caution for stack overflow
+    wifi_mgmr_scan_params_t *ch_req;
+    uint8_t buffer[sizeof(wifi_mgmr_msg_t) + sizeof(wifi_mgmr_scan_params_t)]; //XXX caution for stack overflow
+    struct mac_ssid *ssid = NULL;
 
     memset(buffer, 0, sizeof(buffer));
     msg = (wifi_mgmr_msg_t*)buffer;
 
-    ch_req = (wifi_mgmr_scan_fixed_channels_t*)msg->data;
+    ch_req = (wifi_mgmr_scan_params_t*)msg->data;
     ch_req->channel_num = channel_num;
+    ssid = &(ch_req->ssid);
     if (channel_num) {
         memcpy(ch_req->channels, channels, sizeof(ch_req->channels[0]) * channel_num);
+    }
+
+    if (scanssid != NULL) {
+        ssid->length = strlen(scanssid);
+        ssid->length = (ssid->length > MAC_SSID_LEN) ? MAC_SSID_LEN : ssid->length;
+        memcpy(ssid->array, scanssid, ch_req->ssid.length);
+        ssid->array_tail[0] = '\0';
     }
 
     return wifi_mgmr_api_common(
@@ -243,7 +265,7 @@ int wifi_mgmr_api_fw_scan(uint16_t *channels, uint16_t channel_num)
         WIFI_MGMR_EVENT_FW_SCAN,
         (void*)0x1,
         (void*)0x2,
-        sizeof (wifi_mgmr_msg_t) + sizeof(wifi_mgmr_scan_fixed_channels_t) + sizeof(ch_req->channels[0]) * channel_num
+        sizeof (wifi_mgmr_msg_t) + sizeof(wifi_mgmr_scan_params_t) + sizeof(ch_req->channels[0]) * channel_num
     );
 
 }

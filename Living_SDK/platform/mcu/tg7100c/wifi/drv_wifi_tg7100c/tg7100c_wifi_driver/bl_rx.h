@@ -164,7 +164,7 @@ struct hw_rxhdr {
     u32    wild[8];
 };
 
-struct sm_reason_code {
+struct reason_code {
     uint16_t reason_code;
     const char *action;
 };
@@ -184,7 +184,6 @@ typedef struct
 
 } SecurityMode_t;
 
-
 extern const u8 legrates_lut[];
 
 int bl_txdatacfm(void *pthis, void *hostid);
@@ -192,5 +191,6 @@ void bl_prim_tbtt_ind(void *pthis);
 void bl_sec_tbtt_ind(void *pthis);
 void bl_rx_handle_msg(struct bl_hw *bl_hw, struct ipc_e2a_msg *msg);
 void bl_rx_pkt_cb(uint8_t *pkt, int len, int rssi);
-void bl_rx_mgmt_cb(uint8_t *pkt, int len, int rssi);
+const char* wifi_mgmr_get_sm_status_code_str(uint16_t status_code);
+
 #endif /* _RWNX_RX_H_ */

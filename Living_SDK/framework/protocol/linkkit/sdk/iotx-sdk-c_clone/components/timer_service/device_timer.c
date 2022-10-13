@@ -14,16 +14,16 @@
 typedef struct device_timer {
     char timer[28];		// cron格式表达式
     uint8_t enable;		// 是否启用
-    uint8_t runTime;    // 循环开时长
-    uint8_t sleepTime;	// 循环关时长
+    uint32_t runTime;    // 循环开时长
+    uint32_t sleepTime;	// 循环关时长
     uint8_t repeat;		// 是否为重复执行定时
     uint8_t type;		// 定时类型
     char endTime[6];	// 结束时间
     char *targets;		// malloc分配,最大128字节
     int timezone;		// 时区
-    int offset_start[DAYS_OF_WEEK];	// 转换后定时触发时间
-    int offset_end[DAYS_OF_WEEK];	// 转换后循环结束时间
-    int event_ready[DAYS_OF_WEEK];  // 确保定时时间能被执行
+    uint32_t offset_start[DAYS_OF_WEEK];	// 转换后定时触发时间
+    uint32_t offset_end[DAYS_OF_WEEK];	// 转换后循环结束时间
+    uint32_t event_ready[DAYS_OF_WEEK];  // 确保定时时间能被执行
 } device_timer_t;
 
 extern int linkkit_ntp_time_request(void (*ntp_reply)(const char *ntp_offset_time_ms));
@@ -66,6 +66,10 @@ static void get_timer_from_kv(void) {
     #endif
         DS_DEBUG("get %s\r\n", tmp);
         deviceTimerParse(tmp, 1, 0);
+        IOT_Linkkit_Report(0, ITM_MSG_POST_PROPERTY, tmp, strlen(tmp));
+    } else {
+        char* empty = "{\"DeviceTimer\":[]}";
+        IOT_Linkkit_Report(0, ITM_MSG_POST_PROPERTY, empty, strlen(empty));
     }
     #ifndef SDK_VER_16X
     aiot_al_free(tmp);
@@ -361,10 +365,14 @@ static void device_timer_runner(void) {
                     int offset_start = g_device_timer[i].offset_start[j], offset_end = g_device_timer[i].offset_end[j];
 
                     //未进入循环定时窗口期，设置起始时间为定时配置
-                    if (utc_week_second_offset < offset_start && offset_end > offset_start && (_sec_next_event >= offset_start || _sec_next_event == -1)){ 
+                    if ( (utc_week_second_offset < offset_start || (offset_start == 0 && utc_week_second_offset > 518460)) &&
+                        offset_end > offset_start && (_sec_next_event >= offset_start || _sec_next_event == -1)){
                         // printf("TS_period00 next = %d  weed = %d\r\n", _sec_next_event, utc_week_second_offset);
                         // printf("TS_period00 set = %d  end = %d\r\n", offset_start, offset_end);
-                            _sec_next_event = offset_start;
+                            if (offset_start == 0 && utc_week_second_offset > 518460)
+                                _sec_next_event = 604800;
+                            else
+                                _sec_next_event = offset_start;
                             g_device_timer[i].event_ready[j] = 1;
 
                     } else if ((offset_start <= utc_week_second_offset && offset_end >= utc_week_second_offset) ||
@@ -505,19 +513,31 @@ static int days_calc(int years, int months, int day) {
     return days;
 }
 
-static int cron_parse(char *data, uint8_t index, uint8_t type, char* end){
+static int cron_parse(char *data, uint8_t index, uint8_t type, char* end, int *save){
     const char *err = NULL;
     char cron_str[32];
     cron_expr target;
-    cron_str[0] = '*';
-    cron_str[1] = ' ';
-    int offset_end = 0;
-    
-    strcpy(g_device_timer[index].timer, data);
+    // cron_str[0] = '*';
+    // cron_str[1] = ' ';
+    int offset_end = 0, len = 0;
+    extern char** split_str(const char* str, char del, size_t* len_out);
+    extern void free_splitted(char** splitted, size_t len);
+
+    char** fields = split_str(data, ' ', &len);
     memset(cron_str, 0, sizeof(cron_str));
-    snprintf(cron_str, sizeof(cron_str), "* %s", data);
+    if (len == 6) {
+        strcpy(g_device_timer[index].timer, data);
+    } else // if (len == 7)  // include second field
+    {
+        strcpy(g_device_timer[index].timer, &data[strlen(fields[0]) + 1]);
+        *save = 1;
+    }
+    free_splitted(fields, len);
+    snprintf(cron_str, sizeof(cron_str), "* %s", g_device_timer[index].timer);
     memset(&target, 0, sizeof(cron_expr));
     cron_parse_expr(cron_str, &target, &err);
+    //DS_ERR("TS_parse raw:%s\r\n", data);
+    //DS_ERR("TS_parse cron:%s\r\n", cron_str);
     if (err){
         DS_ERR("TS_parse err:%s\r\n", err);
         // aiot_kv_del(DeviceTimer);
@@ -544,7 +564,8 @@ static int cron_parse(char *data, uint8_t index, uint8_t type, char* end){
     if (cron_str[strlen(cron_str) - 1] == '*'){
         g_device_timer[index].repeat = 0;
         for (i = 0; i < DAYS_OF_WEEK; i++) {
-            if (cron_get_bit(target.days_of_week, i)) {
+            if (cron_get_bit(target.days_of_week, (i + 1)%7)) {
+                // printf("1111-------------%x----------\n", target.days_of_week[0]);
                 offset = ((i * 24 + hour) * 60 * 60 + minute * 60 + 28800 - g_device_timer[index].timezone)%604800;
                 if (type == 3 || type == 4) {
                     offset_end = ((i * 24) * 60 * 60 + string2minute(g_device_timer[index].endTime) * 60 
@@ -598,13 +619,21 @@ static int cron_parse(char *data, uint8_t index, uint8_t type, char* end){
         int months = 0, days = 0;
         months = (year - 2021) * 12 + month - 1;
         days = days_calc(year - 2021, months, day);
-        int day_2_utc = days * 86400 + hour * 3600 + minute * 60 + 28800 - g_device_timer[index].timezone + WEEK_START;
-            DS_DEBUG("uptime=%d  up_on_get=%d\r\n", _get_uptime(), uptime_on_get_utc);
-        
-        int timer_once = day_2_utc - ntp_time_s - (_get_uptime() - uptime_on_get_utc);
-        if ( timer_once > 0 && timer_once < 604800) { // 指定日期大于当前时间，且小于一周的，可以配置。
+        uint32_t day_2_utc = days * 86400 + hour * 3600 + minute * 60 + 28800 - g_device_timer[index].timezone + WEEK_START;
+
+        uint32_t endtime_2_utc = day_2_utc - (hour * 3600 + minute * 60) + string2minute(g_device_timer[index].endTime) * 60;
+        int timer_once = -1;
+        if(day_2_utc > ntp_time_s + (_get_uptime() - uptime_on_get_utc))
+            timer_once = day_2_utc - ntp_time_s - (_get_uptime() - uptime_on_get_utc);
+        else if(type == 3 && endtime_2_utc > ntp_time_s + (_get_uptime() - uptime_on_get_utc)) // 循环定时，且结束时间大于当前时间
+            timer_once = day_2_utc % 604800;
+        DS_INFO("utc=%d,uptime=%d,up_on_get=%d  start=%d end=%d ss=%d\r\n",ntp_time_s, _get_uptime(), uptime_on_get_utc, day_2_utc, endtime_2_utc, timer_once);
+        if ( timer_once >= 0 && timer_once < 604800) { // 指定日期大于当前时间，且小于一周的，可以配置。
             g_device_timer[index].offset_start[0] = (day_2_utc - (ntp_time_s - utc))%604800;
             DS_DEBUG("TS_offset=%d\r\n", g_device_timer[index].offset_start[0]);
+            if (endtime_2_utc > day_2_utc) {
+                g_device_timer[index].offset_end[0] = (endtime_2_utc - (ntp_time_s - utc))%604800;
+            }
         } else {
             g_device_timer[index].enable = 0;
         }
@@ -612,6 +641,65 @@ static int cron_parse(char *data, uint8_t index, uint8_t type, char* end){
     
     return 0;
 }
+
+char* device_timer_post(int save) {
+    cJSON *root = NULL, *list = NULL, *items[DeviceTimerSize] = {NULL};
+    int ret = 0, i = 0;
+    root = cJSON_CreateObject();
+    if (root == NULL){
+        ret = -1;
+        goto err;
+    }
+    list = cJSON_CreateArray();
+    if (list == NULL){
+        cJSON_Delete(root);
+        ret = -2;
+        goto err;
+    }
+    for (i =0; i < DeviceTimerSize; i++) {
+        items[i] = cJSON_CreateObject();
+        if (items[i] == NULL){
+            cJSON_Delete(list);
+            cJSON_Delete(root);
+            ret = -3;
+            goto err;
+        }
+
+        cJSON_AddStringToObject(items[i], "T", g_device_timer[i].timer);     // Timer
+        cJSON_AddNumberToObject(items[i], "E", g_device_timer[i].enable);    // Enable
+        cJSON_AddNumberToObject(items[i], "Y", g_device_timer[i].type);      // Type
+        cJSON_AddStringToObject(items[i], "A", g_device_timer[i].targets);   // Targets
+        cJSON_AddNumberToObject(items[i], "Z", g_device_timer[i].timezone);  // TimeZone
+
+        cJSON_AddStringToObject(items[i], "N", g_device_timer[i].endTime);   // EndTime
+        cJSON_AddNumberToObject(items[i], "R", g_device_timer[i].runTime/60);   // RunTime
+        cJSON_AddNumberToObject(items[i], "S", g_device_timer[i].sleepTime/60); // SleepTime
+        cJSON_AddItemToArray(list, items[i]);
+    }
+    cJSON_AddItemToObject(root, DEVICETIMER, list);
+    char *property = cJSON_PrintUnformatted(root);
+    if (property == NULL) {
+        cJSON_Delete(root);
+        ret = -8;
+        goto err;
+    }
+    cJSON_Delete(root);
+    DS_INFO("TS_post:%s\r\n", property);
+    if (save) {
+        #ifndef SDK_VER_16X
+        aiot_kv_set(DEVICETIMER, property, strlen(property), 1);
+        #else
+        HAL_Kv_Set(DEVICETIMER, property, strlen(property), 1);
+        #endif
+    }
+
+    return property;
+
+    err:
+        DS_ERR("err ret=%d", ret);
+        return NULL;
+}
+
 // input: json数据；
 // src: 数据来源：0 --云端； 1--KV
 // save:是否更新kv数据
@@ -626,7 +714,7 @@ int deviceTimerParse(const char *input, uint8_t src, int save){
 
     list = cJSON_GetObjectItem(root, DEVICETIMER);
     int local_timer_arrySize = cJSON_GetArraySize(list);
-    if (DeviceTimerSize != local_timer_arrySize) {
+    if (DeviceTimerSize < local_timer_arrySize) {
         ret = -3;
         goto err;
     }
@@ -683,13 +771,13 @@ int deviceTimerParse(const char *input, uint8_t src, int save){
         if (g_device_timer[j].type == 3) { // period or random timer
             item_JSON = cJSON_GetObjectItem(prop, "R"); //RunTime
             if (item_JSON != NULL && cJSON_IsNumber(item_JSON)) {
-                g_device_timer[j].runTime = item_JSON->valueint;
+                g_device_timer[j].runTime = item_JSON->valueint*60;
                 // DS_DEBUG("RunTime:%d\r\n", item_JSON->valueint);
             }
 
             item_JSON = cJSON_GetObjectItem(prop, "S"); //SleepTime
             if (item_JSON != NULL && cJSON_IsNumber(item_JSON)) {
-                g_device_timer[j].sleepTime = item_JSON->valueint;
+                g_device_timer[j].sleepTime = item_JSON->valueint*60;
                 // DS_DEBUG("SleepTime:%d\r\n", item_JSON->valueint);
             }
         }
@@ -702,12 +790,12 @@ int deviceTimerParse(const char *input, uint8_t src, int save){
 
         item_JSON = cJSON_GetObjectItem(prop, "T"); //Timer
         if (item_JSON != NULL && strlen(item_JSON->valuestring) > 5) {
-            ret = cron_parse(item_JSON->valuestring, j, g_device_timer[j].type, g_device_timer[j].endTime);
+            ret = cron_parse(item_JSON->valuestring, j, g_device_timer[j].type, g_device_timer[j].endTime, &save);
             if (ret != 0) {
                 goto err;
             }
-            strcpy(g_device_timer[j].timer, item_JSON->valuestring);
-            DS_DEBUG("Timer:%s\r\n", item_JSON->valuestring);
+            // strcpy(g_device_timer[j].timer, item_JSON->valuestring);
+            // DS_DEBUG("Timer:%s\r\n", item_JSON->valuestring);
         }
     }
     cJSON_Delete(root);
@@ -715,7 +803,10 @@ int deviceTimerParse(const char *input, uint8_t src, int save){
         #ifndef SDK_VER_16X
         aiot_kv_set(DEVICETIMER, input, strlen(input), 1);
         #else
-        HAL_Kv_Set(DEVICETIMER, input, strlen(input), 1);
+        // HAL_Kv_Set(DEVICETIMER, input, strlen(input), 1);
+        char* paser_timer = device_timer_post(1);
+        if(paser_timer)
+            HAL_Free(paser_timer);
         #endif
     }
     device_timer_runner();
@@ -728,61 +819,4 @@ int deviceTimerParse(const char *input, uint8_t src, int save){
     return ret;
 }
 
-char* device_timer_post(int save) {
-    cJSON *root = NULL, *list = NULL, *items[DeviceTimerSize] = {NULL};
-    int ret = 0, i = 0;
-    root = cJSON_CreateObject();
-    if (root == NULL){
-        ret = -1;
-        goto err;
-    }
-    list = cJSON_CreateArray();
-    if (list == NULL){
-        cJSON_Delete(root);
-        ret = -2;
-        goto err;
-    }
-    for (i =0; i < DeviceTimerSize; i++) {
-        items[i] = cJSON_CreateObject();
-        if (items[i] == NULL){
-            cJSON_Delete(list);
-            cJSON_Delete(root);
-            ret = -3;
-            goto err;
-        }
-
-        cJSON_AddStringToObject(items[i], "T", g_device_timer[i].timer);     // Timer
-        cJSON_AddNumberToObject(items[i], "E", g_device_timer[i].enable);    // Enable
-        cJSON_AddNumberToObject(items[i], "Y", g_device_timer[i].type);      // Type
-        cJSON_AddStringToObject(items[i], "A", g_device_timer[i].targets);   // Targets
-        cJSON_AddNumberToObject(items[i], "Z", g_device_timer[i].timezone);  // TimeZone
-
-        cJSON_AddStringToObject(items[i], "N", g_device_timer[i].endTime);   // EndTime
-        cJSON_AddNumberToObject(items[i], "R", g_device_timer[i].runTime);   // RunTime
-        cJSON_AddNumberToObject(items[i], "S", g_device_timer[i].sleepTime); // SleepTime
-        cJSON_AddItemToArray(list, items[i]);
-    }
-    cJSON_AddItemToObject(root, DEVICETIMER, list);
-    char *property = cJSON_PrintUnformatted(root);
-    if (property == NULL) {
-        cJSON_Delete(root);
-        ret = -8;
-        goto err;
-    }
-    cJSON_Delete(root);
-    DS_INFO("TS_post:%s\r\n", property);
-    if (save) {
-        #ifndef SDK_VER_16X
-        aiot_kv_set(DEVICETIMER, property, strlen(property), 1);
-        #else
-        HAL_Kv_Set(DEVICETIMER, property, strlen(property), 1);
-        #endif
-    }
-
-    return property;
-
-    err:
-        DS_ERR("err ret=%d", ret);
-        return NULL;
-}
 #endif

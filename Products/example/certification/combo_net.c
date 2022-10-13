@@ -64,8 +64,6 @@ typedef struct combo_wifi_state_s {
 
 typedef struct combo_user_bind_s {
     uint8_t bind_state;
-    uint8_t sign_state;
-    uint8_t need_sign;
 } combo_user_bind_t;
 
 uint8_t g_ble_state = 0;
@@ -77,6 +75,12 @@ static netmgr_ap_config_t config;
 static combo_wifi_state_t g_combo_wifi = { COMBO_AP_CONN_UNINIT, 0, 0 };
 
 static combo_user_bind_t g_combo_bind = { 0 };
+
+#ifdef COMBO_AWSS_SILENT_ADV
+static uint8_t g_silent_adv_support = 1;
+#else
+static uint8_t g_silent_adv_support = 0;
+#endif
 
 static combo_event_cb g_combo_event_cb = NULL;
 static combo_common_serv_cb g_combo_common_serv_cb = NULL;
@@ -100,43 +104,21 @@ static void combo_status_change_cb(breeze_event_t event)
         case CONNECTED:
             LOG("Connected");
             g_ble_state = 1;
-            if (g_combo_bind.bind_state) {
-                g_combo_bind.need_sign = 1;
-            } else {
-                g_combo_bind.need_sign = 0;
-            }
             break;
 
         case DISCONNECTED:
             LOG("Disconnected");
             g_ble_state = 0;
-            g_combo_bind.sign_state = 0;
-            g_combo_bind.need_sign = 0;
             aos_post_event(EV_BZ_COMBO, COMBO_EVT_CODE_RESTART_ADV, 0);
             break;
 
         case AUTHENTICATED:
             LOG("Authenticated");
+            g_combo_bind.bind_state = 1;
             break;
 
         case TX_DONE:
             LOG("Payload TX Done");
-            break;
-
-        case EVT_USER_BIND:
-            LOG("Ble bind");
-            g_combo_bind.bind_state = 1;
-            awss_clear_reset();
-            break;
-
-        case EVT_USER_UNBIND:
-            LOG("Ble unbind");
-            g_combo_bind.bind_state = 0;
-            break;
-
-        case EVT_USER_SIGNED:
-            LOG("Ble sign pass");
-            g_combo_bind.sign_state = 1;
             break;
 
         default:
@@ -338,7 +320,9 @@ void wifi_connect_handler(void *arg)
 {
     while(1) {
         aos_sem_wait(&wifi_connect_sem, AOS_WAIT_FOREVER);
-        combo_connect_ap(&g_apinfo);
+        if (g_combo_wifi.awss_run) {
+            combo_connect_ap(&g_apinfo);
+        }
     }
 }
 
@@ -354,29 +338,21 @@ static void combo_restart_ble_adv()
                 if (g_combo_wifi.awss_run) {
                     // in awss mode, should advertising and wait for wifi config
                     // If device is not advertising, it's a redundant operation
-#if (defined (TG7100CEVB))
-#else
+#if (!defined (TG7100CEVB))
                     breeze_stop_advertising();
                     aos_msleep(300); // wait for adv stop
 #endif
-                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NEED);
+                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NORMAL);
                 } else {
-                    breeze_stop_advertising();
+                    if (g_silent_adv_support) {
+                        breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_SILENT);
+                    } else {
+                        breeze_stop_advertising();
+                    }
                 }
             } else {
-                // combo device ap already configed
-                if (g_combo_bind.bind_state) {
-                    // support offline bind, should advertising and wait for offline control over ble
-                    // If device is not advertising, it's a redundant operation
-#if (defined (TG7100CEVB))
-#else
-                    breeze_stop_advertising();
-                    aos_msleep(300); // wait for adv stop
-#endif
-                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NOT_NEED);
-                } else {
-                    breeze_stop_advertising();
-                }
+                // Stop ble adv when ap is configed
+                breeze_stop_advertising();
             }
         }
     }
@@ -446,7 +422,6 @@ int combo_net_init()
 #endif
     aos_sem_new(&wifi_connect_sem, 0);
 
-	g_combo_bind.bind_state = breeze_get_bind_state();
     if ((strlen(g_combo_pk) > 0) && (strlen(g_combo_ps) > 0)
             && (strlen(g_combo_dn) > 0) && (strlen(g_combo_ds) > 0) && g_combo_pid > 0) {
         uint8_t combo_adv_mac[6] = {0};

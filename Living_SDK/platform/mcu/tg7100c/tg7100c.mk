@@ -18,7 +18,7 @@ btstack := bouffalolab
 GLOBAL_CFLAGS += -DBLE_5_0
 GLOBAL_CFLAGS += -DCFG_STDLIB_ENABLE
 GLOBAL_CFLAGS += -DTG7100C_VERSION_PRINT
-#GLOBAL_CFLAGS += -DCFG_WIFI_DEBUG
+GLOBAL_CFLAGS += -DCFG_WIFI_DEBUG
 
 $(NAME)_COMPONENTS += platform/arch/risc-v/risc_v32I
 #$(NAME)_COMPONENTS += libc rhino hal middleware.common
@@ -29,6 +29,7 @@ $(NAME)_COMPONENTS += platform/mcu/tg7100c/hal_drv
 $(NAME)_COMPONENTS += platform/mcu/tg7100c/utils
 $(NAME)_COMPONENTS += platform/mcu/tg7100c/stage
 $(NAME)_COMPONENTS += platform/mcu/tg7100c/sys
+$(NAME)_COMPONENTS += platform/mcu/tg7100c/security
 
 GLOBAL_INCLUDES += ../../arch/risc-v/risc_v32I/gcc
 GLOBAL_INCLUDES += ../../../include/hal/soc/
@@ -43,6 +44,7 @@ GLOBAL_INCLUDES += ./aos   \
 					./tg7100c_bsp_driver/Common/ring_buffer/                     \
 					./tg7100c_bsp_driver/Common/soft_crc/                        \
 					./tg7100c_bsp_driver/Common/partition/                        \
+					./tg7100c_bsp_driver/Common/cipher_suite/inc				\
 					./network/lwip/src/include																 \
 					./network/lwip/lwip-port/config/													 \
 					./network/lwip/lwip-port/Standalone/											 \
@@ -93,6 +95,7 @@ $(NAME)_SOURCES :=  ./tg7100c_bsp_driver/StdDriver/Src/tg7100c_common.c         
 					./tg7100c_bsp_driver/Common/platform_print/platform_gpio.c                  \
 					./tg7100c_bsp_driver/Common/ring_buffer/ring_buffer.c                       \
 					./tg7100c_bsp_driver/Common/soft_crc/softcrc.c                       \
+					./tg7100c_bsp_driver/Common/cipher_suite/src/bflb_crypt.c	\
 					./tg7100c_bsp_driver/StdDriver/Src/tg7100c_romapi.c           \
 					./tg7100c_bsp_driver/StdDriver/Src/tg7100c_sflash_ext.c       \
 					./tg7100c_bsp_driver/StdDriver/Src/tg7100c_xip_sflash_ext.c   \
@@ -158,7 +161,7 @@ GLOBAL_DEFINES += CONFIG_AOS_CLI_STACK_SIZE=3072
 GLOBAL_DEFINES += TG7100C_COREDUMP
 vfs_DEFINES    += CONFIG_NO_TCPIP
 
-GLOBAL_CFLAGS += -DUSE_M_TIME -DARCH_RISCV
+GLOBAL_CFLAGS += -DUSE_M_TIME -DARCH_RISCV -DBFLB_CRYPT_HARDWARE -DBFLB_PKA_HARDWARE
 
 GLOBAL_CFLAGS   += -fno-omit-frame-pointer -march=rv32imfc -mabi=ilp32f -g -Os -save-temps=obj
 GLOBAL_CFLAGS   += -fstack-usage -Wstack-usage=1536

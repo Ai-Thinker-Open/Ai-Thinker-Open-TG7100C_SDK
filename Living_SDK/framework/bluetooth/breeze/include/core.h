@@ -39,6 +39,7 @@ extern "C"
 #define BZ_FMSK_SECRET_TYPE_Pos         (4)       // FMSK sec type, bit4, mandatory if bit3==1, 0-perproduct, 1-perdevice
 #define BZ_FMSK_BIND_STATE_Pos          (5)       // FMSK bind state, bit5, 0-not bind, 1-binded
 #define BZ_FMSK_WIFI_CONFIG_Pos         (6)       // FMSK wifi config state, bit6, 0-not config, 1-configed
+#define BZ_FMSK_SILENT_ADV_Pos          (7)       // FMSK silent adv, bit7, 0-not silent, 1-silent
 // Breeze security type def
 #define BZ_SEC_TYPE_PRODUCT             (0)       // security type perproduct
 #define BZ_SEC_TYPE_DEVICE              (1)       // security type perdevice
@@ -66,7 +67,7 @@ typedef struct {
 
 ret_code_t core_init(ali_init_t const *p_init);
 void core_reset(void);
-void core_create_bz_adv_data(uint8_t bind_state, uint8_t awss_flag);
+void core_create_bz_adv_data(uint8_t bind_state, uint8_t silent_flag);
 ret_code_t core_get_bz_adv_data(uint8_t *p_data, uint16_t *length);
 void core_event_notify(uint8_t evt_type, uint8_t *data, uint16_t length);
 void core_handle_err(uint8_t src, uint8_t code);

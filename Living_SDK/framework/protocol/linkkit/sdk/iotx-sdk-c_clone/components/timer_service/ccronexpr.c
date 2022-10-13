@@ -225,7 +225,7 @@ uint8_t cron_get_bit(uint8_t* rbyte, int idx) {
     }
 }
 
-static void free_splitted(char** splitted, size_t len) {
+void free_splitted(char** splitted, size_t len) {
     size_t i;
     if (!splitted) return;
     for (i = 0; i < len; i++) {
@@ -611,7 +611,7 @@ static unsigned int parse_uint(const char* str, int* errcode) {
     }
 }
 
-static char** split_str(const char* str, char del, size_t* len_out) {
+char** split_str(const char* str, char del, size_t* len_out) {
     size_t i;
     size_t stlen = 0;
     size_t len = 0;

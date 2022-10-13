@@ -12,6 +12,9 @@
 #include "breeze_hal_ble.h"
 #include "breeze_hal_os.h"
 #include "bzopt.h"
+#ifdef CONFIG_GENIE_OTA
+#include "genie_ais.h"
+#endif
 
 static dev_status_changed_cb m_status_handler;
 static set_dev_status_cb m_ctrl_handler;
@@ -40,8 +43,8 @@ static void notify_status(breeze_event_t event)
 
 static void event_handler(ali_event_t *p_event)
 {
-    uint32_t err_code;
-    bool b_notify_upper = false;
+    // uint32_t err_code;
+    // bool b_notify_upper = false;
 #if BZ_ENABLE_OTA
     breeze_otainfo_t m_disc_evt;
 #endif
@@ -134,9 +137,9 @@ static void event_handler(ali_event_t *p_event)
             if (p_event->rx_data.p_data != NULL) {
                 if ( (p_event->rx_data.p_data[0] == BZ_AC_AS_ADD)
                     || (p_event->rx_data.p_data[0] == BZ_AC_AS_UPDATE)) {
-                    notify_status(EVT_USER_BIND);
+                    // notify_status(EVT_USER_BIND);
                 } else if (p_event->rx_data.p_data[0] == BZ_AC_AS_DELETE) {
-                    notify_status(EVT_USER_UNBIND);
+                    // notify_status(EVT_USER_UNBIND);
                 }
             }
             break;
@@ -146,7 +149,7 @@ static void event_handler(ali_event_t *p_event)
                 if (p_event->rx_data.p_data[0] == BZ_AUTH_SIGN_NO_CHECK_PASS) {
                     // do nothing, for future use
                 } else if (p_event->rx_data.p_data[0] == BZ_AUTH_SIGN_CHECK_PASS) {
-                    notify_status(EVT_USER_SIGNED);
+                    // notify_status(EVT_USER_SIGNED);
                 }
             }
             break;
@@ -216,6 +219,12 @@ int breeze_start(struct device_config *dev_conf)
     init_ali.user_adv_len          = user_adv.len;
 
     err_code = core_init(&init_ali);
+#ifdef CONFIG_GENIE_OTA
+    if(err_code == BZ_SUCCESS) {
+        genie_ais_pre_init();
+        genie_ais_init();
+    }
+#endif
     return ((err_code == BZ_SUCCESS) ? 0 : -1);
 }
 
@@ -317,7 +326,7 @@ void breeze_restart_advertising()
     ble_advertising_start(&adv_data);
 }
 
-int breeze_start_advertising(uint8_t bind_state, uint8_t awss_flag)
+int breeze_start_advertising(uint8_t bind_state, uint8_t silent_flag)
 {
     uint32_t size;
     ais_adv_init_t adv_data = {
@@ -325,7 +334,7 @@ int breeze_start_advertising(uint8_t bind_state, uint8_t awss_flag)
         .name = { .ntype = AIS_ADV_NAME_FULL, .name = "TG" },
     };
 
-    core_create_bz_adv_data(bind_state, awss_flag);
+    core_create_bz_adv_data(bind_state, silent_flag);
 
     adv_data.vdata.len = sizeof(adv_data.vdata.data);
     if (core_get_bz_adv_data(adv_data.vdata.data, &(adv_data.vdata.len))) {
@@ -389,4 +398,53 @@ int breeze_clear_bind_info(void)
         ret = -1;
     }
     return ret;
+}
+
+int32_t aiot_ais_report_awss_status(ais_awss_status_t status, uint16_t subcode)
+{
+    uint8_t buff[7] = {0};
+    uint8_t tlv_statuscode[3] = {0x01, 0x01, 0x00};
+    uint8_t tlv_fatalerror_subcode[4] = {0x03, 0x02, 0x00, 0x00};
+    uint8_t tlv_progress_subcode[4] = {0x04, 0x02, 0x00, 0x00};
+    int32_t res = STATE_SUCCESS;
+    extern char g_ble_state;
+    extern uint16_t last_errsubcode;
+
+    if (g_ble_state == 0) {
+        return -1;
+    }
+
+    tlv_statuscode[2] = (uint8_t)status;
+    memcpy(buff, tlv_statuscode, sizeof(tlv_statuscode));
+
+    if (subcode != 0) {
+        if (AIS_AWSS_STATUS_AP_CONNECT_FAILED == status) {
+            tlv_fatalerror_subcode[2] = subcode & 0xFF;
+            tlv_fatalerror_subcode[3] = (subcode >> 8) & 0xFF;
+
+            memcpy(buff + sizeof(tlv_statuscode), tlv_fatalerror_subcode, sizeof(tlv_fatalerror_subcode));
+            int ret = 0;
+            do{
+                ret = breeze_post(buff, sizeof(buff));
+                aos_msleep(10);
+            } while (ret != 0);
+            return ret;
+        }
+        else if (AIS_AWSS_STATUS_PROGRESS_REPORT == status) {
+            tlv_progress_subcode[2] = subcode & 0xFF;
+            tlv_progress_subcode[3] = (subcode >> 8) & 0xFF;
+            if( !(last_errsubcode == 8 && subcode == 6) )
+                last_errsubcode = subcode;
+            LOG(" last_errsubcode %x", last_errsubcode);
+            memcpy(buff + sizeof(tlv_statuscode), tlv_progress_subcode, sizeof(tlv_progress_subcode));
+            int ret = 0;
+            do{
+                ret = breeze_post(buff, sizeof(buff));
+                aos_msleep(10);
+            } while (ret != 0);
+            return ret;
+        }
+    }
+
+    return breeze_post(buff, 3);
 }

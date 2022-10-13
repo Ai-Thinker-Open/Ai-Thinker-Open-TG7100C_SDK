@@ -526,7 +526,7 @@ static void handle_linkkey_cmd(char *pwbuf, int blen, int argc, char **argv)
         char product_secret[PRODUCT_SECRET_LEN + 1] = { 0 };
         char device_name[DEVICE_NAME_LEN + 1] = { 0 };
         char device_secret[DEVICE_SECRET_LEN + 1] = { 0 };
-        char pidStr[9] = { 0 };
+        char pidStr[11] = { 0 };
 
         len = PRODUCT_KEY_LEN + 1;
         aos_kv_get("linkkit_product_key", product_key, &len);
@@ -751,80 +751,6 @@ static void show_firmware_version(void)
 
     printf("\r\nRegion env: %s\r\n\r\n", REGION_ENV_STRING);
 }
-
-#if 0//(defined (TG7100CEVB))
-void media_to_kv(void)
-{
-    char product_key[PRODUCT_KEY_LEN + 1] = { 0 };
-    char *p_product_key = NULL;
-    char product_secret[PRODUCT_SECRET_LEN + 1] = { 0 };
-    char *p_product_secret = NULL;
-    char device_name[DEVICE_NAME_LEN + 1] = { 0 };
-    char *p_device_name = NULL;
-    char device_secret[DEVICE_SECRET_LEN + 1] = { 0 };
-    char *p_device_secret = NULL;
-    char pidStr[9] = { 0 };
-    char *p_pidStr = NULL;
-    int len;
-
-    int res;
-
-    /* check media valid, and update p */
-    res = ali_factory_media_get(
-                &p_product_key,
-                &p_product_secret,
-                &p_device_name,
-                &p_device_secret,
-                &p_pidStr);
-    if (0 != res) {
-        printf("ali_factory_media_get res = %d\r\n", res);
-        return;
-    }
-
-    /* compare kv media */
-    len = sizeof(product_key);
-    aos_kv_get("linkkit_product_key", product_key, &len);
-    len = sizeof(product_secret);
-    aos_kv_get("linkkit_product_secret", product_secret, &len);
-    len = sizeof(device_name);
-    aos_kv_get("linkkit_device_name", device_name, &len);
-    len = sizeof(device_secret);
-    aos_kv_get("linkkit_device_secret", device_secret, &len);
-    len = sizeof(pidStr);
-    aos_kv_get("linkkit_product_id", pidStr, &len);
-
-    if (p_product_key) {
-        if (0 != memcmp(product_key, p_product_key, strlen(p_product_key))) {
-            printf("memcmp p_product_key different. set kv: %s\r\n", p_product_key);
-            aos_kv_set("linkkit_product_key", p_product_key, strlen(p_product_key), 1);
-        }
-    }
-    if (p_product_secret) {
-        if (0 != memcmp(product_secret, p_product_secret, strlen(p_product_secret))) {
-            printf("memcmp p_product_secret different. set kv: %s\r\n", p_product_secret);
-            aos_kv_set("linkkit_product_secret", p_product_secret, strlen(p_product_secret), 1);
-        }
-    }
-    if (p_device_name) {
-        if (0 != memcmp(device_name, p_device_name, strlen(p_device_name))) {
-            printf("memcmp p_device_name different. set kv: %s\r\n", p_device_name);
-            aos_kv_set("linkkit_device_name", p_device_name, strlen(p_device_name), 1);
-        }
-    }
-    if (p_device_secret) {
-        if (0 != memcmp(device_secret, p_device_secret, strlen(p_device_secret))) {
-            printf("memcmp p_device_secret different. set kv: %s\r\n", p_device_secret);
-            aos_kv_set("linkkit_device_secret", p_device_secret, strlen(p_device_secret), 1);
-        }
-    }
-    if (p_pidStr) {
-        if (0 != memcmp(pidStr, p_pidStr, strlen(p_pidStr))) {
-            printf("memcmp p_pidStr different. set kv: %s\r\n", p_pidStr);
-            aos_kv_set("linkkit_product_id", p_pidStr, strlen(p_pidStr), 1);
-        }
-    }
-}
-#endif
 
 int application_start(int argc, char **argv)
 {

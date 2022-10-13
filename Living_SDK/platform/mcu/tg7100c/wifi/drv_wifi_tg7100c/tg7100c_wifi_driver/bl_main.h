@@ -10,6 +10,8 @@
 #define __RWNX_MAIN_H__
 #include <stdint.h>
 #include <lwip/netif.h>
+#include "lmac_mac.h"
+#include <wifi_mgmr_ext.h>
 
 struct wifi_apm_sta_info
 {
@@ -41,7 +43,7 @@ int bl_main_apm_sta_delete(uint8_t sta_idx);
 int bl_main_apm_remove_all_sta();
 int bl_main_conf_max_sta(uint8_t max_sta_supported);
 int bl_main_cfg_task_req(uint32_t ops, uint32_t task, uint32_t element, uint32_t type, void *arg1, void *arg2);
-int bl_main_scan(uint16_t *fixed_channels, uint16_t channel_num);
+int bl_main_scan(struct netif *netif, uint16_t *fixed_channels, uint16_t channel_num, struct mac_ssid *ssid);
 int bl_main_raw_send(uint8_t *pkt , int len);
 int bl_main_set_country_code(char *country_code);
 int bl_main_get_channel_nums();
@@ -50,6 +52,7 @@ int bl_main_beacon_interval_set(uint16_t beacon_int);
 struct wifi_event_sm_connect_ind
 {
     uint16_t status_code;
+    uint16_t reason_code;
     /// BSSID
     uint8_t bssid[6];
     /// Index of the VIF for which the association process is complete
@@ -66,16 +69,22 @@ struct wifi_event_sm_connect_ind
     uint8_t width;
     uint32_t center_freq1;
     uint32_t center_freq2;
+    /// Pointer to the structure used for the diagnose module
+    struct sm_tlv_list connect_diagnose;
 };
 
 struct wifi_event_sm_disconnect_ind
 {
+    /// Status code of the disconnection procedure
+    uint16_t status_code;
     /// Reason of the disconnection.
     uint16_t reason_code;
     /// Index of the VIF.
     uint8_t vif_idx;
     /// FT over DS is ongoing
     int ft_over_ds;
+    /// Pointer to the structure used for the diagnose module
+    struct sm_tlv_list connect_diagnose;
 };
 
 typedef struct

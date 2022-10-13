@@ -4,7 +4,8 @@
 
 #include "include/wifi_mgmr_ext.h"
 #include "stateMachine.h"
-#include "os_hal.h"
+#include "lmac_mac.h"
+#include "bl_os_private.h"
 
 #define WIFI_MGMR_SCAN_ITEMS_MAX (50)
 #define WIFI_MGMR_PROFILES_MAX (1)
@@ -67,6 +68,7 @@ typedef enum WIFI_MGMR_EVENT {
     WIFI_MGMR_EVENT_GLB_DISABLE_AUTORECONNECT,
     WIFI_MGMR_EVENT_GLB_ENABLE_AUTORECONNECT,
     WIFI_MGMR_EVENT_GLB_IP_UPDATE,
+    WIFI_MGMR_EVENT_GLB_MGMR_WAKEUP,
 
 } WIFI_MGMR_EVENT_T;
 
@@ -100,15 +102,18 @@ typedef struct wifi_mgmr_profile_msg {
     char ssid[32];
     char ssid_tail[1];
     uint32_t ssid_len;
+    char passphr[64];
+    char passphr_tail[1];
     char psk[64];
     char psk_tail[1];
-    char pmk[64];
-    char pmk_tail[1];
+    uint32_t passphr_len;
     uint32_t psk_len;
-    uint32_t pmk_len;
-    uint8_t mac[6];
+
+    uint8_t bssid[6];
     uint8_t band;
     uint16_t freq;
+    int ap_info_ttl;
+
     uint8_t dhcp_use;
 } wifi_mgmr_profile_msg_t;
 
@@ -135,13 +140,18 @@ typedef struct wifi_mgmr_ap_msg {
 
 typedef struct wifi_mgmr_profile {
     uint16_t ssid_len;
+    uint16_t passphr_len;
     uint16_t psk_len;
-    uint16_t pmk_len;
-    uint8_t mac[6];
     char ssid[33];
     //uint8_t no_autoconnect;
+    char passphr[65];
     char psk[65];
-    char pmk[65];
+
+    uint8_t bssid[6];
+    uint8_t band;
+    uint16_t freq;
+    int ap_info_ttl;
+
     uint8_t dhcp_use;
 
     /*reserved field for wifi manager*/
@@ -196,22 +206,28 @@ struct wlan_netif {
 };
 
 #define MAX_FIXED_CHANNELS_LIMIT (14)
-typedef struct wifi_mgmr_scan_fixed_channels {
+typedef struct wifi_mgmr_scan_params {
     uint16_t channel_num;
-    uint16_t channels[];
-} wifi_mgmr_scan_fixed_channels_t;
+    uint16_t channels[MAX_FIXED_CHANNELS_LIMIT];
+    struct mac_ssid ssid;
+} wifi_mgmr_scan_params_t;
 
 typedef struct wifi_mgmr_connect_ind_stat_info {
     uint16_t status_code;
+    uint16_t reason_code;
     uint16_t chan_freq;
     /*mgmr recv ind event from fw when connect or disconnect  */
 #define WIFI_MGMR_CONNECT_IND_STAT_INFO_TYPE_IND_CONNECTION (1)
 #define WIFI_MGMR_CONNECT_IND_STAT_INFO_TYPE_IND_DISCONNECTION (2)
     char ssid[32];
-    char psk[65];
+    char passphr[65];
     uint8_t bssid[6];
     uint8_t type_ind;
     uint8_t chan_band;
+    os_mutex_t diagnose_lock;
+    os_mutex_t diagnose_get_lock;
+    /// Pointer to the structure used for the diagnose module
+    struct sm_tlv_list connect_diagnose;
 } wifi_mgmr_connect_ind_stat_info_t;
 
 typedef struct wifi_mgmr_sta_basic_info {
@@ -245,12 +261,23 @@ typedef struct wifi_mgmr {
     uint8_t ready;//TODO mgmr init process
     char country_code[3];
     uint8_t disable_autoreconnect;
-    uint8_t ap_bcn_int;
+    uint16_t ap_bcn_int;
     int channel_nums;
 
+    int ap_info_ttl_curr;
+
     /*pending task*/
-    uint32_t pending_task;
-#define WIFI_MGMR_PENDING_TASK_SCAN_BIT     (1 << 0)
+    union {
+        uint32_t val;
+        struct {
+#define WIFI_MGMR_PENDING_TASK_SCAN_BIT      (1 << 0)
+#define WIFI_MGMR_PENDING_TASK_IP_UPDATE_BIT (1 << 1)
+#define WIFI_MGMR_PENDING_TASK_IP_GOT_BIT    (1 << 2)
+            unsigned int scan       :   1;
+            unsigned int ip_update  :   1;
+            unsigned int ip_got     :   1;
+        } bits;
+    } pending_task;
     /*Feature Bits*/
     uint32_t features;
 #define WIFI_MGMR_FEATURES_SCAN_SAVE_HIDDEN_SSID    (1 << 0)
@@ -261,9 +288,12 @@ typedef struct wifi_mgmr {
 
 #define MAX_HOSTNAME_LEN_CHECK 32
     char hostname[MAX_HOSTNAME_LEN_CHECK];
+    void *dns_server;
+    uint8_t ps_flag;
 } wifi_mgmr_t;
 
-int wifi_mgmr_event_notify(wifi_mgmr_msg_t *msg);
+int wifi_mgmr_pending_task_set(uint32_t bits);
+int wifi_mgmr_event_notify(wifi_mgmr_msg_t *msg, int use_block);
 int wifi_mgmr_state_get_internal(int *state);
 int wifi_mgmr_state_get_internal2(int *state);
 int wifi_mgmr_status_code_clean_internal(void);
@@ -280,6 +310,6 @@ int wifi_mgmr_api_fw_tsen_reload(void);
 
 static inline int wifi_mgmr_scan_item_is_timeout(wifi_mgmr_t *mgmr, wifi_mgmr_scan_item_t *item)
 {
-    return ((unsigned int)bl_os_tick_get() - (unsigned int)item->timestamp_lastseen) >= mgmr->scan_item_timeout ? 1 : 0;
+    return ((unsigned int)bl_os_get_time_ms() - (unsigned int)item->timestamp_lastseen) >= mgmr->scan_item_timeout ? 1 : 0;
 }
 #endif

@@ -6,7 +6,7 @@
 #include "lmac_types.h"
 #include "lmac_msg.h"
 #include "ipc_shared.h"
-#include "os_hal.h"
+#include "bl_os_private.h"
 
 #define BIT(n) (0x1U << (n))
 
@@ -29,13 +29,6 @@
 #define RWNX_CMD_WAIT_COMPLETE(flags) \
         (!(flags & (RWNX_CMD_FLAG_WAIT_ACK | RWNX_CMD_FLAG_WAIT_CFM)))
 
-#if 1
-// FIXME(Zhuoran.rong) converts ms to ticks
-#define RWNX_80211_CMD_TIMEOUT_MS    os_ticks_to_ms(1000 * 1000)
-#else
-#define RWNX_80211_CMD_TIMEOUT_MS    300
-#endif
-
 //TODO fix the follow ugly declare
 struct bl_hw;
 struct bl_cmd;
@@ -44,8 +37,8 @@ typedef int (*msg_cb_fct)(struct bl_hw *bl_hw, struct bl_cmd *cmd, struct ipc_e2
 #define RWNX_CMD_MAX_QUEUED         8
 struct bl_cmd {
     struct list_head list;
-    lmac_msg_id_t id;
-    lmac_msg_id_t reqid;
+    ke_msg_id_t id;
+    ke_msg_id_t reqid;
     struct lmac_msg *a2e_msg;
     char            *e2a_msg;
     u32 tkn;

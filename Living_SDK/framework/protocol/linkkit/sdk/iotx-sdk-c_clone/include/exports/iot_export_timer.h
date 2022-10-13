@@ -15,10 +15,10 @@ extern "C" {
     #define DeviceTimerSize 13
 
     #define DS "dev_timer"
-    #define DS_ERR(...)           log_err(TS, __VA_ARGS__)
-    #define DS_WRN(...)           log_warning(TS, __VA_ARGS__)
-    #define DS_INFO(...)          log_info(TS, __VA_ARGS__)
-    #define DS_DEBUG(...)         log_debug(TS, __VA_ARGS__)
+    #define DS_ERR(...)           log_err(DS, __VA_ARGS__)
+    #define DS_WRN(...)           log_warning(DS, __VA_ARGS__)
+    #define DS_INFO(...)          log_info(DS, __VA_ARGS__)
+    #define DS_DEBUG(...)         log_debug(DS, __VA_ARGS__)
     typedef void (*devicetimer_callback)(const char *report_data, const char *property_name, const char *data);
     int aiot_device_timer_init(const char **devicetimer_list, uint8_t num_devicetimer_list, devicetimer_callback timer_service_cb);
     int deviceTimerParse(const char *input, uint8_t src, int save);

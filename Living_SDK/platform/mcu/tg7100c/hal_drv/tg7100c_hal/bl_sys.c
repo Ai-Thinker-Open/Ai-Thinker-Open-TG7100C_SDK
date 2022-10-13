@@ -78,6 +78,7 @@ int bl_sys_logall_disable(void)
 
 int bl_sys_reset_por(void)
 {
+    bl_sys_rstinfo_set(BL_RST_SOFTWARE);
     asm volatile("csrci mstatus, 8");
     asm volatile("nop;nop;nop;nop");
     asm volatile("nop;nop;nop;nop");

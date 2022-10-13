@@ -1,5 +1,6 @@
 #include <string.h>
 #include <utils_log.h>
+#include <bl_os_private.h>
 #include <utils_tlv_bl.h>
 #include <tg710x_fw_api.h>
 
@@ -74,7 +75,7 @@
 static const struct mac_addr mac_addr_bcst = {{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}};
 static const struct mac_addr mac_addr_zero = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-static const struct ieee80211_channel bl_channels_24_JP[] = {
+static const struct ieee80211_channel bl_channels_24_General[] = {
     { .band = NL80211_BAND_2GHZ, .center_freq = 2412, .hw_value = 1, .max_power=16},
     { .band = NL80211_BAND_2GHZ, .center_freq = 2417, .hw_value = 2, .max_power=16},
     { .band = NL80211_BAND_2GHZ, .center_freq = 2422, .hw_value = 3, .max_power=16},
@@ -91,75 +92,30 @@ static const struct ieee80211_channel bl_channels_24_JP[] = {
     { .band = NL80211_BAND_2GHZ, .center_freq = 2484, .hw_value = 14, .max_power=16},
 };
 
-static const struct ieee80211_channel bl_channels_24_CN[] = {
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2412, .hw_value = 1, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2417, .hw_value = 2, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2422, .hw_value = 3, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2427, .hw_value = 4, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2432, .hw_value = 5, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2437, .hw_value = 6, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2442, .hw_value = 7, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2447, .hw_value = 8, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2452, .hw_value = 9, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2457, .hw_value = 10, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2462, .hw_value = 11, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2467, .hw_value = 12, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2472, .hw_value = 13, .max_power=16},
-};
-
-static const struct ieee80211_channel bl_channels_24_US[] = {
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2412, .hw_value = 1, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2417, .hw_value = 2, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2422, .hw_value = 3, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2427, .hw_value = 4, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2432, .hw_value = 5, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2437, .hw_value = 6, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2442, .hw_value = 7, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2447, .hw_value = 8, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2452, .hw_value = 9, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2457, .hw_value = 10, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2462, .hw_value = 11, .max_power=16},
-};
-
-static const struct ieee80211_channel bl_channels_24_ER[] = {
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2412, .hw_value = 1, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2417, .hw_value = 2, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2422, .hw_value = 3, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2427, .hw_value = 4, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2432, .hw_value = 5, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2437, .hw_value = 6, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2442, .hw_value = 7, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2447, .hw_value = 8, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2452, .hw_value = 9, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2457, .hw_value = 10, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2462, .hw_value = 11, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2467, .hw_value = 12, .max_power=16},
-    { .band = NL80211_BAND_2GHZ, .center_freq = 2472, .hw_value = 13, .max_power=16},
-};
-
 static const struct ieee80211_dot_d country_list[] = 
 {
     {
         .code   = "CN",
-        .channel_num = sizeof(bl_channels_24_CN)/sizeof(bl_channels_24_CN[0]),
-        .channels = bl_channels_24_CN,
+        .channel_num = 13,
+        .channels = bl_channels_24_General,
     },
     {
         .code   = "JP",
-        .channel_num = sizeof(bl_channels_24_JP)/sizeof(bl_channels_24_JP[0]),
-        .channels = bl_channels_24_JP,
+        .channel_num = 14,
+        .channels = bl_channels_24_General,
     },
     {
         .code   = "US",
-        .channel_num = sizeof(bl_channels_24_US)/sizeof(bl_channels_24_US[0]),
-        .channels = bl_channels_24_US,
+        .channel_num = 11,
+        .channels = bl_channels_24_General,
     },
     {
         .code   = "EU",
-        .channel_num = sizeof(bl_channels_24_ER)/sizeof(bl_channels_24_ER[0]),
-        .channels = bl_channels_24_ER,
+        .channel_num = 13,
+        .channels = bl_channels_24_General,
     },
 };
+
 static int channel_num_default;
 static const struct ieee80211_channel *channels_default;
 
@@ -169,7 +125,7 @@ static int cfg80211_get_channel_list(const char *code, int *channel_num, const s
 
     for (i = 0; i < sizeof(country_list)/sizeof(country_list[0]); i++) {
         if (0 == strcmp(country_list[i].code, code)) {
-            if (channel_num) {
+            if(channel_num){
                 *channel_num = country_list[i].channel_num;
             }
             if (channels) {
@@ -186,11 +142,11 @@ void bl_msg_update_channel_cfg(const char *code)
 {
     if (cfg80211_get_channel_list(code, &channel_num_default, &channels_default)) {
         /*get channel list failed, so we set the default one*/
-        channel_num_default = sizeof(bl_channels_24_JP)/sizeof(bl_channels_24_JP[0]);
-        channels_default = bl_channels_24_JP;
-        printf("[WF] %s NOT found, using JP instead, num of channel %d\r\n", code, channel_num_default);
+        channel_num_default = sizeof(bl_channels_24_General)/sizeof(bl_channels_24_General[0]);
+        channels_default = bl_channels_24_General;
+        bl_os_printf("[WF] %s NOT found, using General instead, num of channel %d\r\n", code, channel_num_default);
     } else {
-        printf("[WF] country code %s used, num of channel %d\r\n", code, channel_num_default);
+        bl_os_printf("[WF] country code %s used, num of channel %d\r\n", code, channel_num_default);
     }
 
 }
@@ -262,16 +218,16 @@ static inline uint16_t phy_channel_to_freq(uint8_t band, int channel)
  ****************************************************************************************
  */
 
-static inline void *bl_msg_zalloc(lmac_msg_id_t const id,
-                                    lmac_task_id_t const dest_id,
-                                    lmac_task_id_t const src_id,
+static inline void *bl_msg_zalloc(ke_msg_id_t const id,
+                                    ke_task_id_t const dest_id,
+                                    ke_task_id_t const src_id,
                                     uint16_t const param_len)
 {
     struct lmac_msg *msg;
 
     msg = (struct lmac_msg *)bl_os_malloc(sizeof(struct lmac_msg) + param_len);
     if (msg == NULL) {
-        os_printf("%s: msg allocation failed\n", __func__);
+        bl_os_printf("%s: msg allocation failed\n", __func__);
         return NULL;
     }
     memset(msg, 0, sizeof(struct lmac_msg) + param_len);
@@ -286,8 +242,7 @@ static inline void *bl_msg_zalloc(lmac_msg_id_t const id,
 
 static inline bool is_non_blocking_msg(int id) {
     return ((id == MM_TIM_UPDATE_REQ) || (id == ME_RC_SET_RATE_REQ) ||
-            (id == MM_BFMER_ENABLE_REQ) || (id == ME_TRAFFIC_IND_REQ) ||
-            (id == MESH_PATH_CREATE_REQ) || (id == MESH_PROXY_ADD_REQ));
+            (id == MM_BFMER_ENABLE_REQ) || (id == ME_TRAFFIC_IND_REQ));
 }
 
 #define BITS_PER_LONG 32
@@ -303,7 +258,7 @@ static inline int test_bit(int nr, const volatile unsigned long *addr)
 }
 
 static int bl_send_msg(struct bl_hw *bl_hw, const void *msg_params,
-                         int reqcfm, lmac_msg_id_t reqid, void *cfm)
+                         int reqcfm, ke_msg_id_t reqid, void *cfm)
 {
     struct lmac_msg *msg;
     struct bl_cmd *cmd;
@@ -315,7 +270,7 @@ static int bl_send_msg(struct bl_hw *bl_hw, const void *msg_params,
     msg = container_of((void *)msg_params, struct lmac_msg, param);
 
     if (!bl_hw->ipc_env) {
-        os_printf("%s: bypassing (restart must have failed)\r\n", __func__);
+        bl_os_printf("%s: bypassing (restart must have failed)\r\n", __func__);
         bl_os_free(msg);
         RWNX_DBG(RWNX_FN_LEAVE_STR);
         return -EBUSY;
@@ -326,7 +281,7 @@ static int bl_send_msg(struct bl_hw *bl_hw, const void *msg_params,
     cmd = bl_os_malloc(sizeof(struct bl_cmd));
     if (NULL == cmd) {
         bl_os_free(msg);
-        os_printf("%s: failed to allocate mem for cmd, size is %d\r\n", __func__, sizeof(struct bl_cmd));
+        bl_os_printf("%s: failed to allocate mem for cmd, size is %d\r\n", __func__, sizeof(struct bl_cmd));
         return -ENOMEM;
     }
     memset(cmd, 0, sizeof(struct bl_cmd));
@@ -408,17 +363,6 @@ int bl_send_monitor_channel_set(struct bl_hw *bl_hw, struct mm_monitor_channel_c
     }
 
     req->freq = phy_channel_to_freq(PHY_BAND_2G4, channel);
-    if (use_40Mhz) {
-        req->use_40Mhz = 1;
-        if (1 == use_40Mhz) {
-            req->higher_band = 0;
-        } else {
-            req->higher_band = 1;
-        }
-    } else {
-        req->use_40Mhz = 0;
-        req->higher_band = 0;
-    }
 
     return bl_send_msg(bl_hw, req, 1, MM_MONITOR_CHANNEL_CFM, cfm);
 }
@@ -458,7 +402,7 @@ int bl_send_me_config_req(struct bl_hw *bl_hw)
     }
 
     /* Set parameters for the ME_CONFIG_REQ message */
-    os_printf("[ME] HT supp %d, VHT supp %d\r\n", 1, 0);
+    bl_os_printf("[ME] HT supp %d, VHT supp %d\r\n", 1, 0);
 
     req->ht_supp = 1;
     req->vht_supp = 0;
@@ -631,7 +575,7 @@ int bl_send_remove_if(struct bl_hw *bl_hw, uint8_t inst_nbr)
     return bl_send_msg(bl_hw, remove_if_req_param, 1, MM_REMOVE_IF_CFM, NULL);
 }
 
-int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_num)
+int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_num, struct mac_ssid *ssid, const uint8_t *mac)
 {
     struct scanu_start_req *req;
     int i, index;
@@ -655,8 +599,16 @@ int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_
     } else {
         req->chan_cnt = channel_num;
     }
-    req->ssid_cnt = 0;
+
+    if (ssid != NULL && ssid->length) {
+        req->ssid_cnt = 1;
+        req->ssid[0].length = ssid->length;
+        memcpy(req->ssid[0].array, ssid->array, req->ssid[0].length);
+    } else {
+        req->ssid_cnt = 0;
+    }
     req->bssid = mac_addr_bcst;
+    memcpy(&(req->mac), mac, ETH_ALEN);
     req->no_cck = true;//FIXME params? talk with firmware guys
 
     if (req->ssid_cnt == 0) {
@@ -676,7 +628,7 @@ int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_
     req->add_ies = 0;
 
     for (i = 0; i < req->chan_cnt; i++) {
-        index = (channel_num_default == req->chan_cnt) ? i : (channels[i]);
+        index = (channel_num_default == req->chan_cnt) ? i : (channels[i] - 1);
         chan = &(channels_default[index]);
 
         req->chan[i].band = chan->band;
@@ -733,6 +685,7 @@ int bl_send_sm_connect_req(struct bl_hw *bl_hw, struct cfg80211_connect_params *
     if (!req)
         return -ENOMEM;
 
+#if 0 // useless
     /* Set parameters for the SM_CONNECT_REQ message */
     if (sme->crypto.n_ciphers_pairwise &&
         ((sme->crypto.ciphers_pairwise[0] == WLAN_CIPHER_SUITE_WEP40) ||
@@ -756,6 +709,8 @@ int bl_send_sm_connect_req(struct bl_hw *bl_hw, struct cfg80211_connect_params *
         req->ctrl_port_ethertype = sme->crypto.control_port_ethertype;
     else
         req->ctrl_port_ethertype = ETH_P_PAE;
+#endif
+    req->ctrl_port_ethertype = ETH_P_PAE;
 
     if (sme->bssid && !MAC_ADDR_CMP(sme->bssid, mac_addr_bcst.array) && !MAC_ADDR_CMP(sme->bssid, mac_addr_zero.array)) {
         for (i=0;i<ETH_ALEN;i++)
@@ -775,11 +730,13 @@ int bl_send_sm_connect_req(struct bl_hw *bl_hw, struct cfg80211_connect_params *
         req->ssid.array[i] = sme->ssid[i];
     req->ssid.length = sme->ssid_len;
     req->flags = flags;
+#if 0 // useless
     if (WARN_ON(sme->ie_len > sizeof(req->ie_buf)))
         return -EINVAL;
     if (sme->ie_len)
         memcpy(req->ie_buf, sme->ie, sme->ie_len);
     req->ie_len = sme->ie_len;
+#endif
     req->listen_interval = bl_mod_params.listen_itv;
     req->dont_wait_bcmc = !bl_mod_params.listen_bcmc;
 
@@ -803,7 +760,7 @@ int bl_send_sm_connect_req(struct bl_hw *bl_hw, struct cfg80211_connect_params *
     return bl_send_msg(bl_hw, req, 1, SM_CONNECT_CFM, cfm);
 }
 
-int bl_send_sm_disconnect_req(struct bl_hw *bl_hw, u16 reason)
+int bl_send_sm_disconnect_req(struct bl_hw *bl_hw)
 {
     struct sm_disconnect_req *req;
 
@@ -816,7 +773,6 @@ int bl_send_sm_disconnect_req(struct bl_hw *bl_hw, u16 reason)
     }
 
     /* Set parameters for the SM_DISCONNECT_REQ message */
-    req->reason_code = reason;
     req->vif_idx = bl_hw->vif_index_sta;
 
     /* Send the SM_DISCONNECT_REQ message to LMAC FW */

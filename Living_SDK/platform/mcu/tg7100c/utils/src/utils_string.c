@@ -42,7 +42,7 @@ static int params_filter(char** params,uint32_t *r)
 }
 
 
-void get_bytearray_from_string(char** params, uint8_t *result,int array_size)
+void tg7100c_get_bytearray_from_string(char** params, uint8_t *result,int array_size)
 {
     
     int i = 0;
@@ -56,7 +56,7 @@ void get_bytearray_from_string(char** params, uint8_t *result,int array_size)
     }
 }
 
-void get_uint8_from_string(char** params, uint8_t *result)
+void tg7100c_get_uint8_from_string(char** params, uint8_t *result)
 {
 	uint32_t p = 0;
 	int state=0;
@@ -68,7 +68,7 @@ void get_uint8_from_string(char** params, uint8_t *result)
 		*result = 0;
 }
 
-void get_uint16_from_string(char** params, uint16_t *result)
+void tg7100c_get_uint16_from_string(char** params, uint16_t *result)
 {
 	uint32_t p = 0;
 	int state=0;
@@ -80,7 +80,7 @@ void get_uint16_from_string(char** params, uint16_t *result)
 		*result = 0;
 }
 
-void get_uint32_from_string(char** params, uint32_t *result)
+void tg7100c_get_uint32_from_string(char** params, uint32_t *result)
 {
     uint32_t p = 0;
 	int state=0;
@@ -118,4 +118,25 @@ void utils_parse_number_adv(const char *str, char sep, uint8_t *buf, int buflen,
     str++;
   }
   *count = (i + 1);
+}
+
+
+unsigned long long convert_arrayToU64(uint8_t* inputArray)
+{
+    unsigned long long result = 0;
+    for(uint8_t i = 0; i < 8; i++)
+    {
+        result <<= 8;
+        result |= (unsigned long long)inputArray[7-i];
+    }
+
+    return result;
+}
+
+void convert_u64ToArray(unsigned long long inputU64, uint8_t result[8])
+{
+    for(int i = 0; i < 8; i++)
+    {
+        result[i] = inputU64>>(i*8);
+    }
 }

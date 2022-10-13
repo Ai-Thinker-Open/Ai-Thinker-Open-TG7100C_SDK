@@ -49,7 +49,7 @@ extern unsigned int g_report_id;
 #define DEVICE_SECRET_LEN   (64)
 #define PRODUCT_SECRET_LEN  (64)
 
-#define LIVING_SDK_VERSION  "1.6.6-12"
+#define LIVING_SDK_VERSION  "1.6.6-15"
 #define LINKKIT_VERSION     "2.3.0" "_FY_" LIVING_SDK_VERSION
 
 #define MODULE_VENDOR_ID    (32)    /* Partner ID */

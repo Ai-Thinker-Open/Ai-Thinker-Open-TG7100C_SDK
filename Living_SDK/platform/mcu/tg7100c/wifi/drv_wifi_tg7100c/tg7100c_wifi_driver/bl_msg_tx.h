@@ -19,10 +19,10 @@ int bl_send_start(struct bl_hw *bl_hw);
 int bl_send_add_if(struct bl_hw *bl_hw, const unsigned char *mac,
                      enum nl80211_iftype iftype, bool p2p, struct mm_add_if_cfm *cfm);
 int bl_send_remove_if(struct bl_hw *bl_hw, uint8_t inst_nbr);
-int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_num);
+int bl_send_scanu_req(struct bl_hw *bl_hw, uint16_t *channels, uint16_t channel_num, struct mac_ssid *ssid, const uint8_t *mac);
 int bl_send_scanu_raw_send(struct bl_hw *bl_hw, uint8_t *pkt, int len);
 int bl_send_sm_connect_req(struct bl_hw *bl_hw, struct cfg80211_connect_params *sme, struct sm_connect_cfm *cfm);
-int bl_send_sm_disconnect_req(struct bl_hw *bl_hw, u16 reason);
+int bl_send_sm_disconnect_req(struct bl_hw *bl_hw);
 int bl_send_mm_powersaving_req(struct bl_hw *bl_hw, int mode);
 int bl_send_mm_denoise_req(struct bl_hw *bl_hw, int mode);
 int bl_send_apm_start_req(struct bl_hw *bl_hw, struct apm_start_cfm *cfm, char *ssid, char *password, int channel, uint8_t vif_index, uint8_t hidden_ssid, uint16_t bcn_int);

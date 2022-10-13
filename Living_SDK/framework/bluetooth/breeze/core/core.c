@@ -128,7 +128,7 @@ void core_handle_err(uint8_t src, uint8_t code)
     }
 }
 
-void core_create_bz_adv_data(uint8_t bind_state, uint8_t awss_flag)
+void core_create_bz_adv_data(uint8_t bind_state, uint8_t silent_flag)
 {
     uint16_t idx;
     uint8_t version = 0;
@@ -163,19 +163,14 @@ void core_create_bz_adv_data(uint8_t bind_state, uint8_t awss_flag)
     fmsk |= 1 << BZ_FMSK_SECRET_TYPE_Pos;
     g_auth.auth_type = BZ_AUTH_TYPE_PER_DEV;
 #endif
-    if(bind_state && (version > 6)){
-        BREEZE_DEBUG("Breeze binded");
-        fmsk |= 1 << BZ_FMSK_BIND_STATE_Pos;
+    fmsk &= ~(1 << BZ_FMSK_BIND_STATE_Pos);
+    fmsk &= ~(1 << BZ_FMSK_WIFI_CONFIG_Pos);
+    if(silent_flag && (version > 6)){
+        BREEZE_DEBUG("silent adv");
+        fmsk |= 1 << BZ_FMSK_SILENT_ADV_Pos;
     } else{
-        BREEZE_DEBUG("Breeze unbind");
-        fmsk &= ~(1 << BZ_FMSK_BIND_STATE_Pos);
-    }
-    if(awss_flag && (version > 6)){
-        BREEZE_DEBUG("need awss");
-        fmsk |= 1 << BZ_FMSK_WIFI_CONFIG_Pos;
-    } else{
-        BREEZE_DEBUG("no need awss");
-        fmsk &= ~(1 << BZ_FMSK_WIFI_CONFIG_Pos);
+        BREEZE_DEBUG("normal adv");
+        fmsk &= ~(1 << BZ_FMSK_SILENT_ADV_Pos);
     }
     g_core.adv_data[idx++] = fmsk;
     // PID

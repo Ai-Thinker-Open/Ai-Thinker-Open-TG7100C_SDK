@@ -19,6 +19,9 @@ $(NAME)_SOURCES += tg7100c_hal/bl_uart.c \
                   tg7100c_hal/bl_efuse.c \
                   tg7100c_hal/bl_flash.c \
                   tg7100c_hal/bl_pwm.c \
+                  tg7100c_hal/bl_pm.c \
+                  tg7100c_hal/bl_pds.c \
+                  tg7100c_hal/bl_sec_pka.c \
                   tg7100c_hal/bl_sec_aes.c \
                   tg7100c_hal/bl_sec_sha.c \
                   tg7100c_hal/bl_wifi.c \

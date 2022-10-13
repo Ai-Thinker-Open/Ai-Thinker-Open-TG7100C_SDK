@@ -1,22 +1,15 @@
 
-/* Brief: This demo shows how to use esp32 as a webserver
+/* Brief: This demo shows how to use BL602 as a webserver
  * 
  * - use a sta connect to this ap
- * - open the browser and input the ip_address of this esp32(the default ip_adress is: 192.168.4.1 )
- * - and you can see "hello,this is esp32" on this web page
+ * - open the browser and input the ip_address of this BL602(the default ip_adress is: 192.168.4.1 )
+ * - and you can see "hello,this is BL602" on this web page
  *
  */
+
 #include "FreeRTOS.h"
-//#include "esp_wifi.h"
-//#include "esp_system.h"
-//#include "esp_event.h"
-//#include "esp_event_loop.h"
-//#include "nvs_flash.h"
-//#include "driver/gpio.h"
 #include "portmacro.h"
 #include "event_groups.h"
-//#include "esp_log.h"
-//#include "tcpip_adapter.h"
 #include "lwip/err.h"
 #include "string.h"
 #include "lwip/sys.h"
@@ -36,10 +29,10 @@ const static char http_index_hml[] = "<!DOCTYPE html>"
       "    html, body, iframe { margin: 0; padding: 0; height: 100%; }\n"
       "    iframe { display: block; width: 100%; border: none; }\n"
       "  </style>\n"
-      "<title>HELLO ESP32</title>\n"
+      "<title>HELLO TG7100C</title>\n"
       "</head>\n"
       "<body>\n"
-      "<h1>Hello World, from ESP32!</h1>\n"
+      "<h1>Hello World, from TG7100C!</h1>\n"
       "</body>\n"
       "</html>\n";
 

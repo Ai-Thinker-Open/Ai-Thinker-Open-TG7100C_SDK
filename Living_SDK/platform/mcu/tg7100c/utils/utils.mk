@@ -16,6 +16,7 @@ COMPONENT_SRCS := src/utils_hex.c \
 				  src/utils_hmac_sha1_fast.c \
 				  src/tg7100c_utils_base64.c \
 				  src/utils_crc.c \
+				  src/utils_string.c \
 				  #src/utils_string.c
 GLOBAL_INCLUDES += include
 

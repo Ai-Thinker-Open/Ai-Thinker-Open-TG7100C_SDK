@@ -53,9 +53,9 @@ static void my_pbuf_free_custom(struct pbuf *p)
 {
     bl_custom_pbuf_t* my_pbuf = (bl_custom_pbuf_t*)p;
 
-void bl60x_firmwre_mpdu_free(void *swdesc);
-    //printf("--- cb free@%p\r\n", my_pbuf->swdesc);
-    bl60x_firmwre_mpdu_free(my_pbuf->swdesc);
+void tg710x_firmwre_mpdu_free(void *swdesc);
+    //bl_os_printf("--- cb free@%p\r\n", my_pbuf->swdesc);
+    tg710x_firmwre_mpdu_free(my_pbuf->swdesc);
 }
 
 static void my_pbuf_free_custom_fake(struct pbuf *p)
@@ -103,7 +103,7 @@ static void bl_rx_mgmt(uint32_t *skb,  struct hw_rxhdr *hw_rxhdr, int len)
          (0x01 == mgmt->da[0] && 0x00 == mgmt->da[1]) ||
          (0x01 == mgmt->bssid[0] && 0x00 == mgmt->bssid[1])) {
 
-        printf("[RX] %d, %08X %04X, DATA addr1: %02X:%02X:%02X:%02X:%02X:%02X addr2: %02X:%02X:%02X:%02X:%02X:%02X, addr3: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+        bl_os_printf("[RX] %d, %08X %04X, DATA addr1: %02X:%02X:%02X:%02X:%02X:%02X addr2: %02X:%02X:%02X:%02X:%02X:%02X, addr3: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
                 len,
                 (unsigned int)counter++,
                 mgmt->frame_control,
@@ -168,7 +168,7 @@ static void bl_rx_mgmt(uint32_t *skb,  struct hw_rxhdr *hw_rxhdr, int len)
                 mgmt->da[5]
         );
     } else if (ieee80211_is_data_qos(mgmt->frame_control)){
-        os_printf("[RX] %04X QOS DATA %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+        bl_os_printf("[RX] %04X QOS DATA %02X:%02X:%02X:%02X:%02X:%02X\r\n",
                 mgmt->frame_control,
                 mgmt->da[0],
                 mgmt->da[1],
@@ -193,25 +193,24 @@ static void dump_pkt_infor(struct hw_rxhdr *hw_rxhdr)
 #define PACKET_TEST_INTERVAL     (4 * 1000)
     int16_t freq_offset = 0;
     static int32_t freq_offset_all = 0;
-    //uint16_t gain_status = 0;
+    uint16_t gain_status = 0;
     static uint32_t packets_num = 0;
     static uint32_t packets_lasttime = 0;
 
-    //gain_status = ((uint16_t)(hw_rxhdr->hwvect.rssi3)) | (((uint16_t)hw_rxhdr->hwvect.rssi4) << 8);
+    gain_status = ((uint16_t)(hw_rxhdr->hwvect.rssi3)) | (((uint16_t)hw_rxhdr->hwvect.rssi4) << 8);
 
-    if ((int32_t)bl_os_tick_get() - (int32_t)packets_lasttime > PACKET_TEST_INTERVAL) {
+    if ((int32_t)bl_os_get_tick() - (int32_t)packets_lasttime > PACKET_TEST_INTERVAL) {
         packets_num = 0;
         freq_offset_all = 0;
     }
     packets_num++;
-    packets_lasttime = bl_os_tick_get();
+    packets_lasttime = bl_os_get_tick();
 
     if (hw_rxhdr->hwvect.format_mod >=2) {
         /*11n mode*/
         freq_offset = (((uint32_t) hw_rxhdr->hwvect.evm3) | (((uint32_t)hw_rxhdr->hwvect.evm4) << 8));
         freq_offset_all += ((int)(freq_offset * 20 / 2440));
-#if 0
-        os_printf("[11n] %04d bytes[%03lu], rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3_4 %03d, freq_offset %d, ppm %f\r\n",
+        bl_os_printf("[11n] %04d bytes[%03lu], rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3_4 %03d, freq_offset %d, ppm %f\r\n",
                 hw_rxhdr->hwvect.len,
                 packets_num,
                 hw_rxhdr->hwvect.rssi1,
@@ -223,13 +222,11 @@ static void dump_pkt_infor(struct hw_rxhdr *hw_rxhdr)
                 (int)(freq_offset * 20 / 2440),
                 ((float) (freq_offset_all)) / packets_num
         );
-#endif
     } else if (hw_rxhdr->hwvect.leg_rate > 3) {
         /*11g mode*/
         freq_offset = (((uint32_t) hw_rxhdr->hwvect.evm3) | (((uint32_t)hw_rxhdr->hwvect.evm4) << 8));
         freq_offset_all += ((int)(freq_offset * 20 / 2440));
-#if 0
-        os_printf("[11g] %04d bytes[%03lu], rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3_4 %03d, freq_offset %d, ppm %f\r\n",
+        bl_os_printf("[11g] %04d bytes[%03lu], rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3_4 %03d, freq_offset %d, ppm %f\r\n",
                 hw_rxhdr->hwvect.len,
                 packets_num,
                 hw_rxhdr->hwvect.rssi1,
@@ -241,13 +238,11 @@ static void dump_pkt_infor(struct hw_rxhdr *hw_rxhdr)
                 (int)(freq_offset * 20 / 2440),
                 ((float)(freq_offset_all)) / packets_num
         );
-#endif
     } else {
         /*11b mode*/
         freq_offset = ((int32_t)0) - (((int32_t)(hw_rxhdr->hwvect.evm3 << 24)) >> 24);
         freq_offset_all += ((int)(freq_offset * 0.7));
-#if 0
-        os_printf("[11b] %04d bytes[%03lu], fcs_err %d, rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3 %04u:%03d, freq_offset %d, ppm %f\r\n",
+        bl_os_printf("[11b] %04d bytes[%03lu], fcs_err %d, rssi %d, %04x, lna %02u, rbb %02u, dg %02d; evm3 %04u:%03d, freq_offset %d, ppm %f\r\n",
                 hw_rxhdr->hwvect.len,
                 packets_num,
                 hw_rxhdr->hwvect.fcs_err,
@@ -261,7 +256,6 @@ static void dump_pkt_infor(struct hw_rxhdr *hw_rxhdr)
                 (int)(freq_offset * 0.7),
                 ((float)(freq_offset_all)) / packets_num
         );
-#endif
     }
 }
 
@@ -280,11 +274,6 @@ int tcpip_stack_input(void *swdesc, uint8_t status, void *hwhdr, unsigned int ms
         if (hw_rxhdr->flags_is_80211_mpdu) {
             //TODO fix spilted buff
             //dump_pkt_infor(hw_rxhdr);
-            if (0 == ((*(uint8_t*)skb_payload) & 0x0C)) {
-                //printf("---- Got PKT, len is %d\r\n", rxdesc->frame_len);
-                extern void bl_rx_mgmt_cb(uint8_t *pkt, int len, int rssi);
-                bl_rx_mgmt_cb((uint8_t*)skb_payload, hw_rxhdr->hwvect.len, hw_rxhdr->hwvect.rssi1);
-            }
             bl_rx_pkt_cb((uint8_t*)skb_payload, hw_rxhdr->hwvect.len, hw_rxhdr->hwvect.rssi1);
             bl_rx_mgmt(skb_payload, hw_rxhdr, hw_rxhdr->hwvect.len);
         } else {
@@ -293,7 +282,7 @@ int tcpip_stack_input(void *swdesc, uint8_t status, void *hwhdr, unsigned int ms
 
             if (hw_rxhdr->flags_sta_idx != 0xff) {
                 if (hw_rxhdr->flags_is_4addr) {
-                    printf("[RX] Trigger 4addr unexpected frame\r\n");
+                    bl_os_printf("[RX] Trigger 4addr unexpected frame\r\n");
                 }
             }
             os_printf("********************ETH Start******************************\r\n");
@@ -338,14 +327,14 @@ int tcpip_stack_input(void *swdesc, uint8_t status, void *hwhdr, unsigned int ms
                         pkt->len[0] - msdu_offset
                 );
 #if 0
-                printf("Header %p, len %u\r\n", h, pkt->len[0]);
+                bl_os_printf("Header %p, len %u\r\n", h, pkt->len[0]);
 #endif
                 i = 1;//header is already set
                 while (i < sizeof(pkt->pkt)/sizeof(pkt->pkt[0])) {
                     if (0 == pkt->len[i]) {
                         /*empty item. break now*/
 #if 0
-                        printf("break @%d len %u\r\n", i, pkt->len[i]);
+                        bl_os_printf("break @%d len %u\r\n", i, pkt->len[i]);
 #endif
                         break;
                     }
@@ -362,7 +351,7 @@ int tcpip_stack_input(void *swdesc, uint8_t status, void *hwhdr, unsigned int ms
                     );
                     pbuf_cat(h, t);
 #if 0
-                    printf("chaining... %p, len %u\r\n",
+                    bl_os_printf("chaining... %p, len %u\r\n",
                             t,
                             pkt->len[i]
                     );
@@ -373,7 +362,7 @@ int tcpip_stack_input(void *swdesc, uint8_t status, void *hwhdr, unsigned int ms
                     return 0;
                 }
             } else {
-                os_printf("------ Frame received but no active vif (%d)\r\n", hw_rxhdr->flags_vif_idx);
+                bl_os_printf("------ Frame received but no active vif (%d)\r\n", hw_rxhdr->flags_vif_idx);
             }
         }
     }
@@ -468,40 +457,38 @@ int bl_ipc_init(struct bl_hw *bl_hw, struct ipc_shared_env_tag *ipc_shared_mem)
 void bl_utils_dump(void)
 {
     int i, cnt;
-    //struct pbuf *p;
-    //struct bl_txhdr *txhdr;
+    struct pbuf *p;
+    struct bl_txhdr *txhdr;
 
-    os_printf("---------- bl_utils_dump -----------\r\n");
+    bl_os_puts("---------- bl_utils_dump -----------\r\n");
 
-    os_printf("txdesc_free_idx: %lu(%lu)\r\n",
+    bl_os_printf("txdesc_free_idx: %lu(%lu)\r\n",
             ipc_env->txdesc_free_idx,
             ipc_env->txdesc_free_idx & (NX_TXDESC_CNT0 - 1)
     );
-    os_printf("txdesc_used_idx: %lu(%lu)\r\n",
+    bl_os_printf("txdesc_used_idx: %lu(%lu)\r\n",
             ipc_env->txdesc_used_idx,
             ipc_env->txdesc_used_idx & (NX_TXDESC_CNT0 - 1)
     );
     cnt = sizeof(ipc_env->tx_host_id0)/sizeof(ipc_env->tx_host_id0[0]);
-    os_printf("tx_host_id0 cnt: %d(used %ld)\r\n",
+    bl_os_printf("tx_host_id0 cnt: %d(used %ld)\r\n",
             cnt,
             (int32_t)ipc_env->txdesc_free_idx - (int32_t)ipc_env->txdesc_used_idx
     );
-    os_printf(  "  list:   pbuf    status ptr  status\r\n");
+    bl_os_puts(  "  list:   pbuf    status ptr  status\r\n");
     for (i = 0; i < cnt; i++) {
         if (ipc_env->txdesc_used_idx + i == ipc_env->txdesc_free_idx) {
             /*break on empty*/
             break;
         }
-        //p = (struct pbuf*)(ipc_env->tx_host_id0[(ipc_env->txdesc_used_idx + i) & (NX_TXDESC_CNT0 - 1)]);
-#if 0
+        p = (struct pbuf*)(ipc_env->tx_host_id0[(ipc_env->txdesc_used_idx + i) & (NX_TXDESC_CNT0 - 1)]);
         txhdr = (struct bl_txhdr*)(((uint32_t)p->payload) + RWNX_HWTXHDR_ALIGN_PADS((uint32_t)p->payload));
-        os_printf("    [%lu]%p(%p:%08lX)\r\n",
+        bl_os_printf("    [%lu]%p(%p:%08lX)\r\n",
                 (ipc_env->txdesc_used_idx + i) & (NX_TXDESC_CNT0 - 1),
-                p, 
+                p,
                 p ? (void*)(txhdr->host.status_addr) : 0,
                 p ? txhdr->status.value : 0
         );
-#endif
     }
-    os_printf("========== bl_utils_dump End =======\r\n");
+    bl_os_puts("========== bl_utils_dump End =======\r\n");
 }

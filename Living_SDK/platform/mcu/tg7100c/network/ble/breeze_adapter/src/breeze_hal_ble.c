@@ -54,6 +54,7 @@ void ble_disconnect(uint8_t reason)
     }
 
     bt_conn_disconnect(g_conn, zreason);
+
 }
 
 static void connected(struct bt_conn *conn, uint8_t err)
@@ -67,6 +68,10 @@ static void connected(struct bt_conn *conn, uint8_t err)
             bt_init_info->on_connected();
         }
     }
+#ifdef CONFIG_GENIE_OTA
+    extern void genie_ais_connect(struct bt_conn *p_conn);
+    genie_ais_connect((struct bt_conn *)conn);
+#endif
 }
 
 static void disconnected(struct bt_conn *conn, u8_t reason)
@@ -84,6 +89,10 @@ static void disconnected(struct bt_conn *conn, u8_t reason)
     if (bt_init_info && (bt_init_info->on_disconnected)) {
         bt_init_info->on_disconnected();
     }
+#ifdef CONFIG_GENIE_OTA
+    extern void genie_ais_disconnect(uint8_t reason);
+    genie_ais_disconnect(0);
+#endif
 }
 
 static void ais_nc_ccc_cfg_changed(const struct bt_gatt_attr *attr,
@@ -499,8 +508,14 @@ ais_err_t ble_advertising_start(ais_adv_init_t *adv)
 
     param.id = 0;
     param.options = (BT_LE_ADV_OPT_CONNECTABLE |BT_LE_ADV_OPT_ONE_TIME);
-    param.interval_min = 0x0050;
-    param.interval_max = 0x0060;
+    if (adv->vdata.data[3] & (1 << 7)) {
+        param.interval_min = 0x0640;
+        param.interval_max = 0x0650;
+
+    } else {
+        param.interval_min = 0x0050;
+        param.interval_max = 0x0060;
+    }
 
     if (adv->flag & AIS_AD_GENERAL) {
         flag |= BT_LE_AD_GENERAL;

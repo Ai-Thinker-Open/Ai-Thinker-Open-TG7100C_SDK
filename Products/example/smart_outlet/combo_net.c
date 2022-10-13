@@ -66,8 +66,6 @@ typedef struct combo_wifi_state_s {
 
 typedef struct combo_user_bind_s {
     uint8_t bind_state;
-    uint8_t sign_state;
-    uint8_t need_sign;
 } combo_user_bind_t;
 
 uint8_t g_ble_state = 0;
@@ -80,6 +78,12 @@ static combo_wifi_state_t g_combo_wifi = { COMBO_AP_CONN_UNINIT, 0, 0 };
 
 static combo_user_bind_t g_combo_bind = { 0 };
 
+#ifdef COMBO_AWSS_SILENT_ADV
+static uint8_t g_silent_adv_support = 1;
+#else
+static uint8_t g_silent_adv_support = 0;
+#endif
+
 static breeze_apinfo_t g_apinfo;
 static aos_sem_t wifi_connect_sem;
 
@@ -90,6 +94,7 @@ char g_combo_ps[PRODUCT_SECRET_LEN + 1] = { 0 };
 char g_combo_dn[DEVICE_NAME_LEN + 1] = { 0 };
 char g_combo_ds[DEVICE_SECRET_LEN + 1] = { 0 };
 uint32_t g_combo_pid = 0;
+uint16_t last_errsubcode = 0;
 
 static void combo_status_change_cb(breeze_event_t event)
 {
@@ -97,43 +102,21 @@ static void combo_status_change_cb(breeze_event_t event)
         case CONNECTED:
             LOG("Connected");
             g_ble_state = 1;
-            if (g_combo_bind.bind_state) {
-                g_combo_bind.need_sign = 1;
-            } else {
-                g_combo_bind.need_sign = 0;
-            }
             break;
 
         case DISCONNECTED:
             LOG("Disconnected");
             g_ble_state = 0;
-            g_combo_bind.sign_state = 0;
-            g_combo_bind.need_sign = 0;
             aos_post_event(EV_BZ_COMBO, COMBO_EVT_CODE_RESTART_ADV, 0);
             break;
 
         case AUTHENTICATED:
             LOG("Authenticated");
+            g_combo_bind.bind_state = 1;
             break;
 
         case TX_DONE:
             LOG("Payload TX Done");
-            break;
-
-        case EVT_USER_BIND:
-            LOG("Ble bind");
-            g_combo_bind.bind_state = 1;
-            awss_clear_reset();
-            break;
-
-        case EVT_USER_UNBIND:
-            LOG("Ble unbind");
-            g_combo_bind.bind_state = 0;
-            break;
-
-        case EVT_USER_SIGNED:
-            LOG("Ble sign pass");
-            g_combo_bind.sign_state = 1;
             break;
 
         default:
@@ -210,12 +193,13 @@ static char combo_is_str_asii(char *str)
     return 1;
 }
 
+int ms_cnt = 0;
 static void combo_connect_ap(breeze_apinfo_t * info)
 {
-    int ms_cnt = 0;
     uint8_t ap_connected = 0;
     ap_scan_info_t scan_result;
     int ap_scan_result = -1;
+    int rssi = 0;
 
     memset(&config, 0, sizeof(netmgr_ap_config_t));
     if (!info) {
@@ -257,6 +241,8 @@ static void combo_connect_ap(breeze_apinfo_t * info)
         apscan_reset_scan_chan();
         HAL_AWSS_OPEN_MONITOR(combo_80211_frame_callback);
         HAL_AWSS_SWITCH_CHANNEL(channel, 0, NULL);
+        last_errsubcode = 0;
+        LOG(" last_errsubcode %x", last_errsubcode);
         while (ms_cnt < 10000) {
             if (!monitor_got_bssid) {
                 cur_chn_time = HAL_UptimeMs();
@@ -281,12 +267,53 @@ static void combo_connect_ap(breeze_apinfo_t * info)
     hal_wifi_suspend_station(NULL);
     netmgr_reconnect_wifi();
     ms_cnt = 0;
-    while (ms_cnt < 40000) {
+    while (ms_cnt < 45000) {
         // set connect ap timeout
         if (netmgr_get_ip_state() == false) {
             aos_msleep(500);
             ms_cnt += 500;
             LOG("wait ms_cnt(%d)", ms_cnt);
+            if(ms_cnt==10000) {
+                char* info = "{\"v\":\"%s\",\"t\":\"%d\",\"s\":\"%s\",\"r\":\"%d\",\"p\":\"%s%d\"}";
+                int len = strlen(info) + strlen(aos_get_app_version()) + strlen(config.ssid) + 30;
+                // uint32_t t = HAL_UptimeMs();
+                unsigned char sign[16] = {0};
+                unsigned char out[33] = {0};
+                #include "utils_md5.h"
+                if (strlen(config.pwd) > 0) {
+                    utils_md5((unsigned char *)config.pwd, strlen(config.pwd), sign);
+                    utils_md5_hexstr(sign, out);
+                    LITE_hexbuf_convert(sign, out, 16, 1);
+                    out[10] = 0;
+                    out[11] = strlen((unsigned char *)config.pwd);
+                }
+                #if (defined (TG7100CEVB))
+                wifi_mgmr_rssi_get(&rssi);
+                #endif
+                char* data = (char*)aos_malloc(len);
+                if(data) {
+                    memset(data, 0, len);
+                    HAL_Snprintf(data, len, info, aos_get_app_version(),(uint32_t)HAL_UptimeMs(),config.ssid, rssi, out, out[11]);
+                    LOG("----%s", data);
+                    int payloadlen = strlen(data);
+                    int i = 0;
+                    for(i = payloadlen; i >= 0; i--) {
+                        data[i+5] = data[i];
+                    }
+                    data[0] = 0x01;
+                    data[1] = 0x01;
+                    data[2] = 0x07;
+                    data[3] = 0x07;
+                    data[4] = payloadlen;
+
+                    int ret = 0;
+                    do{
+                      ret = breeze_post(data, payloadlen+5);
+                      aos_msleep(10);
+                    } while (ret != 0);
+                    aos_free(data);
+                }
+            }
             if (netmgr_get_ip_state() == true) {
                 LOG("AP connected");
                 ap_connected = 1;
@@ -298,28 +325,59 @@ static void combo_connect_ap(breeze_apinfo_t * info)
             break;
         }
     }
-
+    ms_cnt = 0;
     if (!ap_connected) {
         uint16_t err_code = 0;
 
         // if AP connect fail, should inform the module to suspend station
         // to avoid module always reconnect and block Upper Layer running
         hal_wifi_suspend_station(NULL);
+        #if (defined (TG7100CEVB))
+        int s_code = 0;
+        wifi_mgmr_status_code_get(&s_code);
+            switch (s_code)
+            {
+            case 0:
+                err_code = 0xC4E3; // AP connect fail(Authentication fail or Association fail or AP exeption)
+                break;
+            case 12:
+                err_code = 0xC4E0; // 50400
+                break;
+            case 6:
+            case 8:
+            case 9:
+            case 10:
+            case 17:
+            case 18:
+                err_code = 0x0100 | s_code; // or 50403?
+                break;
 
+            default:
+                err_code = 0x0100 | s_code;
+                break;
+            }
+            wifi_mgmr_rssi_get(&rssi);
+            if (rssi < -70)
+                err_code = 0xC4E1; // 50401: rssi too low
+        #else
         // if ap connect failed in specified timeout, rescan and analyse fail reason
         memset(&scan_result, 0, sizeof(ap_scan_info_t));
         LOG("start awss_apscan_process");
         ap_scan_result = awss_apscan_process(NULL, config.ssid, &scan_result);
-        LOG("stop awss_apscan_process");
+        LOG("stop awss_apscan_process %x", last_errsubcode);
         if ( (ap_scan_result == 0) && (scan_result.found) ) {
             if (scan_result.rssi < -70) {
                 err_code = 0xC4E1; // rssi too low
             } else {
-                err_code = 0xC4E3; // AP connect fail(Authentication fail or Association fail or AP exeption)
+                if(last_errsubcode == 0)
+                    err_code = 0xC4E3; // AP connect fail(Authentication fail or Association fail or AP exeption)
+                else
+                    err_code = last_errsubcode;
             }
         } else {
             err_code = 0xC4E0; // AP not found
         }
+        #endif
 
         if(g_ble_state){
             uint8_t ble_rsp[DEV_ERRCODE_MSG_MAX_LEN + 8] = {0};
@@ -331,7 +389,12 @@ static void combo_connect_ap(breeze_apinfo_t * info)
             ble_rsp[ble_rsp_idx++] = sizeof(err_code);              // Notify SubErrcode Length
             memcpy(ble_rsp + ble_rsp_idx, (uint8_t *)&err_code, sizeof(err_code));  // Notify SubErrcode Value
             ble_rsp_idx += sizeof(err_code);
-            breeze_post(ble_rsp, ble_rsp_idx);
+
+            int ret = 0;
+            do{
+                ret = breeze_post(ble_rsp, ble_rsp_idx);
+                aos_msleep(20);
+            } while (ret != 0);
         }
 
         combo_set_ap_state(COMBO_AP_DISCONNECTED);
@@ -339,6 +402,7 @@ static void combo_connect_ap(breeze_apinfo_t * info)
 
         /* always restart awss if connect ap failed */
         device_start_awss(0);
+        last_errsubcode = 0;
     }
 }
 
@@ -346,7 +410,9 @@ void wifi_connect_handler(void *arg)
 {
     while(1) {
         aos_sem_wait(&wifi_connect_sem, AOS_WAIT_FOREVER);
-        combo_connect_ap(&g_apinfo);
+        if (g_combo_wifi.awss_run) {
+            combo_connect_ap(&g_apinfo);
+        }
     }
 }
 
@@ -362,29 +428,21 @@ static void combo_restart_ble_adv()
                 if (g_combo_wifi.awss_run) {
                     // in awss mode, should advertising and wait for wifi config
                     // If device is not advertising, it's a redundant operation
-#if (defined (TG7100CEVB))
-#else
+#if (!defined (TG7100CEVB))
                     breeze_stop_advertising();
                     aos_msleep(300); // wait for adv stop
 #endif
-                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NEED);
+                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NORMAL);
                 } else {
-                    breeze_stop_advertising();
+                    if (g_silent_adv_support) {
+                        breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_SILENT);
+                    } else {
+                        breeze_stop_advertising();
+                    }
                 }
             } else {
-                // combo device ap already configed
-                if (g_combo_bind.bind_state) {
-                    // support offline bind, should advertising and wait for offline control over ble
-                    // If device is not advertising, it's a redundant operation
-#if (defined (TG7100CEVB))
-#else
-                    breeze_stop_advertising();
-                    aos_msleep(300); // wait for adv stop
-#endif
-                    breeze_start_advertising(g_combo_bind.bind_state, COMBO_AWSS_NOT_NEED);
-                } else {
-                    breeze_stop_advertising();
-                }
+                // Stop ble adv when ap is configed
+                breeze_stop_advertising();
             }
         }
     }
@@ -448,7 +506,6 @@ int combo_net_init()
 #endif
     aos_sem_new(&wifi_connect_sem, 0);
 
-	g_combo_bind.bind_state = breeze_get_bind_state();
     if ((strlen(g_combo_pk) > 0) && (strlen(g_combo_ps) > 0)
             && (strlen(g_combo_dn) > 0) && (strlen(g_combo_ds) > 0) && g_combo_pid > 0) {
         uint8_t combo_adv_mac[6] = {0};
@@ -515,7 +572,12 @@ void combo_ap_conn_notify(void)
 {
     uint8_t rsp[] = {0x01, 0x01, 0x01};
     if (g_ble_state) {
-        breeze_post(rsp, sizeof(rsp));
+
+        int ret = 0;
+        do{
+            ret = breeze_post(rsp, sizeof(rsp));
+            aos_msleep(10);
+        } while (ret != 0);
     }
 }
 
@@ -523,43 +585,12 @@ void combo_token_report_notify(void)
 {
     uint8_t rsp[] = { 0x01, 0x01, 0x03 };
     if (g_ble_state) {
-        breeze_post(rsp, sizeof(rsp));
+        int ret = 0;
+        do{
+            ret = breeze_post(rsp, sizeof(rsp));
+            aos_msleep(10);
+        } while (ret != 0);
     }
-}
-
-int32_t aiot_ais_report_awss_status(ais_awss_status_t status, uint16_t subcode)
-{
-    uint8_t buff[7] = {0};
-    uint8_t tlv_statuscode[3] = {0x01, 0x01, 0x00};
-    uint8_t tlv_fatalerror_subcode[4] = {0x03, 0x02, 0x00, 0x00};
-    uint8_t tlv_progress_subcode[4] = {0x04, 0x02, 0x00, 0x00};
-    int32_t res = STATE_SUCCESS;
-
-    if (g_ble_state == 0) {
-        return -1;
-    }
-
-    tlv_statuscode[2] = (uint8_t)status;
-    memcpy(buff, tlv_statuscode, sizeof(tlv_statuscode));
-
-    if (subcode != 0) {
-        if (AIS_AWSS_STATUS_AP_CONNECT_FAILED == status) {
-            tlv_fatalerror_subcode[2] = subcode & 0xFF;
-            tlv_fatalerror_subcode[3] = (subcode >> 8) & 0xFF;
-
-            memcpy(buff + sizeof(tlv_statuscode), tlv_fatalerror_subcode, sizeof(tlv_fatalerror_subcode));
-            return breeze_post(buff, sizeof(buff));
-        }
-        else if (AIS_AWSS_STATUS_PROGRESS_REPORT == status) {
-            tlv_progress_subcode[2] = subcode & 0xFF;
-            tlv_progress_subcode[3] = (subcode >> 8) & 0xFF;
-
-            memcpy(buff + sizeof(tlv_statuscode), tlv_progress_subcode, sizeof(tlv_progress_subcode));
-            return breeze_post(buff, sizeof(buff));
-        }
-    }
-
-    return breeze_post(buff, 3);
 }
 
 int32_t aiot_ais_report_log(const char *fmt, ...)

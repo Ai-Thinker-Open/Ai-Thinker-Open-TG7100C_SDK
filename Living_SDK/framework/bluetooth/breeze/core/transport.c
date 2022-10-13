@@ -14,6 +14,11 @@
 #include "breeze_hal_sec.h"
 #include "breeze_hal_os.h"
 
+#ifdef CONFIG_GENIE_OTA
+#include "genie_ais.h"
+#include "genie_ota.h"
+#endif
+
 #define HEADER_SIZE 4
 #define AES_BLK_SIZE 16
 
@@ -109,7 +114,7 @@ static bool is_valid_tx_command(uint8_t cmd) {
     return false;
 }
 
-static void do_encrypt(uint8_t *data, uint16_t len)
+void do_encrypt(uint8_t *data, uint16_t len)
 {
     uint16_t bytes_to_pad, blk_num = len >> 4;
     uint8_t *decrypt_buf;
@@ -134,7 +139,7 @@ static void do_encrypt(uint8_t *data, uint16_t len)
     hex_byte_dump_verbose(encrypt_data, blk_num << 4, 24);
 }
 
-static void do_decrypt(uint8_t *data, uint16_t *len)
+void do_decrypt(uint8_t *data, uint16_t *len)
 {
     uint16_t blk_num = *len >> 4;
     uint8_t *buffer;
@@ -381,6 +386,14 @@ void transport_rx(uint8_t *p_data, uint16_t length)
         return;
     }
 
+#ifdef CONFIG_GENIE_OTA
+    if(CMD_TYPE(p_data) >= AIS_OTA_VER_REQ && CMD_TYPE(p_data) <= AIS_OTA_DATA)
+    {
+        ais_server_msg_handle(NULL, p_data, HEADER_SIZE + FRAME_LEN(p_data));
+        reset_rx();
+        return;
+    }
+#endif
     if (!rx_frames_left()) {
         if (FRAME_SEQ(p_data) != 0) {
             core_handle_err(ALI_ERROR_SRC_TRANSPORT_1ST_FRAME, BZ_EINVALIDDATA);
@@ -433,8 +446,10 @@ void transport_rx(uint8_t *p_data, uint16_t length)
     }
 
     buff_left = RX_BUFF_LEN - g_transport.rx.bytes_received;
+
     if ((len = MIN(buff_left, FRAME_LEN(p_data))) > 0) {
         if (IS_ENC(p_data) != 0) {
+            // hex_byte_dump_verbose(p_data + HEADER_SIZE, len, 24);
             do_decrypt(p_data + HEADER_SIZE, &len);
         }
         memcpy(g_transport.rx.buff + g_transport.rx.bytes_received, p_data + HEADER_SIZE, len);

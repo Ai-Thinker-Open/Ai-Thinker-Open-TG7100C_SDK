@@ -352,8 +352,11 @@ static void ota_download_thread(void *hand)
     pwrmgmt_suspend_lowpower();
 #endif
 #ifdef TG7100C_POWERSAVE_ENABLE
-    extern int wifi_mgmr_sta_powersaving(int ps);
-    wifi_mgmr_sta_powersaving(0);
+    // extern int wifi_mgmr_sta_powersaving(int ps);
+    // wifi_mgmr_sta_powersaving(0);
+    int wifi_mgmr_sta_ps_enter(uint32_t ps_level);
+    int wifi_mgmr_sta_ps_exit(void);
+    wifi_mgmr_sta_ps_exit();
 #endif
 #if (defined (BOARD_ESP8266))
     ktask_t* h = NULL;

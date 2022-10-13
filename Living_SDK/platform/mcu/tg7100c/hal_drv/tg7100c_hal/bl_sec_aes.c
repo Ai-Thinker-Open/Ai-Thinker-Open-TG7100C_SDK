@@ -6,9 +6,12 @@
 
 #include "bl_irq.h"
 #include "bl_sec.h"
+#include <bflb_crypt.h>
 
 #include <blog.h>
 #define USER_UNUSED(a) ((void)(a))
+
+bflb_crypt_handle_t crypt_handle;
 
 int bl_sec_aes_enc(uint8_t *key, int keysize, uint8_t *input, uint8_t *output)
 {
@@ -251,6 +254,7 @@ int bl_sec_aes_test(void)
     return 0;
 }
 
+
 static void _clear_aes_int()
 {
     uint32_t AESx = SEC_ENG_BASE;
@@ -265,4 +269,494 @@ void bl_sec_aes_IRQHandler(void)
 {
     blog_print("--->>> AES IRQ\r\n");
     _clear_aes_int();
+}
+
+static SEC_ENG_AES_Key_Type get_key_type(uint32_t keybits)
+{
+    switch(keybits)
+    {
+        case 24:
+            return SEC_ENG_AES_KEY_192BITS;
+        case 32:
+            return SEC_ENG_AES_KEY_256BITS;
+        default:
+            return SEC_ENG_AES_KEY_128BITS;
+    }
+}
+
+static int get_cbc_mac_input(size_t length,
+                           const unsigned char *iv, size_t iv_len,
+                           const unsigned char *add, size_t add_len,
+                           const unsigned char *input, size_t tag_len,
+                           unsigned char *b_input)
+{
+    int ret = -1;
+    unsigned char i;
+    unsigned char q;
+    size_t len_left;
+    unsigned char b[16];
+    const unsigned char *src;
+    unsigned int  cbc_adata_round = 0;
+    unsigned int  cbc_pt_round = 0;
+
+    if( tag_len == 2 || tag_len > 16 || tag_len % 2 != 0 )
+        return(ret);
+
+    /* Also implies q is within bounds */
+    if( iv_len < 7 || iv_len > 13 )
+        return(ret);
+
+    if( add_len >= 0xFF00 )
+        return(ret);
+
+    q = 16 - 1 - (unsigned char) iv_len;
+
+    /*
+     * rfc3610_Vector22
+     *
+     *length = 19
+     *iv_len = 13
+     *add_len = 12
+     *
+     * First block B_0:
+     * 0              Flags   -> 61 (0_1_100_001)
+     *1 ... 15-L     Nonce N -> 00 5B 8C CB  CD 9A F8 3C  96 96 76 6C  FA
+     *16-L ... 15    l(m)    -> 19 (00 13)
+     *
+     * With flags as (bits):
+     * 7        Reserved        0
+     * 6        Adata           1
+     * 5 .. 3   M'(t - 2) / 2   4
+     * 2 .. 0   L'q - 1         1
+     */
+    /*
+
+    */
+
+    b[0] = 0;
+    b[0] |= ( add_len > 0 ) << 6;
+    b[0] |= ( ( tag_len - 2 ) / 2 ) << 3;
+    b[0] |= q - 1;
+
+    TG7100C_MemCpy_Fast( b + 1, iv, iv_len );
+
+    for(i = 0, len_left = length; i < q; i++, len_left >>= 8)
+        b[15 - i] = (unsigned char)(len_left & 0xFF);
+
+    if(len_left > 0 )
+        return(ret);
+
+    TG7100C_MemCpy_Fast(b_input, b, 16);
+
+    /*
+     * If there is additional data, update CBC-MAC with
+     * add_len, add, 0 (padding to a block boundary)
+     */
+    if( add_len > 0 )
+    {
+        size_t use_len;
+        len_left = add_len;
+        src = add;
+
+        TG7100C_MemSet( b, 0, 16 );
+
+        /* if add_len more than 2^16-2^8 */
+
+        /*
+        if( (add_len >= ((1 << 16) - (1 << 8))) && (add_len < (1 << 32) ) )
+        {
+            b[0] = 0xFF;
+            b[1] = 0xFE;
+        }
+        else if( (add_len >=((1 << 32) ) && (add_len < (1 << 64) ) )
+        {
+            b[0] = 0xFF;
+            b[1] = 0xFF;
+        }
+        else if( (add_len > 0 ) && (add_len < ((1 << 16) - (1 << 8)) ) )
+        {
+            b[0] = (unsigned char)( ( add_len >> 8 ) & 0xFF );
+            b[1] = (unsigned char)( ( add_len      ) & 0xFF );
+        }
+        */
+
+        /* first round for adata */
+        cbc_adata_round = 1;
+
+        b[0] = (unsigned char)((add_len >> 8 ) & 0xFF);
+        b[1] = (unsigned char)((add_len      ) & 0xFF);
+
+        use_len = len_left < 16 - 2 ? len_left : 16 - 2;
+        TG7100C_MemCpy_Fast(b + 2, src, use_len );
+        len_left -= use_len;
+        src += use_len;
+
+        TG7100C_MemCpy_Fast(b_input + cbc_adata_round * 16, b, 16 );
+
+        while( len_left > 0 )
+        {
+            cbc_adata_round++;
+
+            use_len = len_left > 16 ? 16 : len_left;
+            if (use_len < 16) {
+                TG7100C_MemSet(b_input + cbc_adata_round * 16, 0, 16);
+            }
+
+            TG7100C_MemCpy_Fast( b_input + cbc_adata_round * 16, src, use_len);
+
+            len_left -= use_len;
+            src += use_len;
+        }
+    }
+
+    /*
+     * Authenticate and {en,de}crypt the message.
+     *
+     * The only difference between encryption and decryption is
+     * the respective order of authentication and {en,de}cryption.
+     */
+    len_left = length;
+    src = input;
+
+    /* Plaintext block is  followed by adata block*/
+    cbc_pt_round = cbc_adata_round + 1;
+
+    while(len_left > 0)
+    {
+        size_t use_len = len_left > 16 ? 16 : len_left;
+
+        TG7100C_MemCpy_Fast(b_input + cbc_pt_round * 16, src, use_len);
+
+        src += use_len;
+        len_left -= use_len;
+
+        cbc_pt_round++;
+    }
+
+    return (0);
+}
+
+static int get_ctr_enc_input(size_t length, const unsigned char *input, unsigned char *b_input, unsigned char *b_output, unsigned int  cbc_pt_round)
+{
+    size_t len_left = 0;
+    const unsigned char *src;
+	unsigned int  ctr_pt_round = 0;
+
+    len_left = length;
+    src = input;
+
+    // Copy CRC plaintext last block output to here as CTR first block input
+    TG7100C_MemCpy_Fast(b_input, b_output + (cbc_pt_round - 1) * 16, 16);
+
+    ctr_pt_round = 1;
+
+    while( len_left > 0 )
+    {
+        size_t use_len = len_left > 16 ? 16 : len_left;
+
+        TG7100C_MemCpy_Fast(b_input + ctr_pt_round * 16, src, use_len);
+
+        src += use_len;
+        len_left -= use_len;
+
+        ctr_pt_round++;
+    }
+
+    return (0);
+}
+
+static int get_ctr_dec_input(size_t length, const unsigned char *input, const unsigned char *tag, size_t tag_len, unsigned char *b_input)
+{
+    size_t len_left = 0;
+    const unsigned char *src;
+    unsigned int  ctr_ct_round = 0;
+
+    len_left = length;
+    src = input;
+
+    // Copy tag in first block to calucate T
+    TG7100C_MemCpy_Fast(b_input, tag, tag_len);
+
+    ctr_ct_round = 1;
+
+    while( len_left > 0 )
+    {
+        size_t use_len = len_left > 16 ? 16 : len_left;
+
+        TG7100C_MemCpy_Fast(b_input + ctr_ct_round * 16, src, use_len);
+
+        src += use_len;
+        len_left -= use_len;
+
+        ctr_ct_round++;
+    }
+
+    return (0);
+}
+
+static int get_ctr_iv(unsigned char *ctr_iv, const unsigned char *iv, size_t iv_len)
+{
+    unsigned char q;
+
+    if( iv_len < 7 || iv_len > 13 )
+    {
+        return(-1);
+    }
+
+    q = 16 - 1 - (unsigned char) iv_len;
+    ctr_iv[0] |= q - 1;
+    TG7100C_MemCpy_Fast(ctr_iv + 1, iv, iv_len);
+
+    return (0);
+}
+
+static unsigned int get_cbc_mac_input_size(size_t msg_len, size_t add_len)
+{
+    //for B0
+    unsigned int block_cnt = 1;
+	size_t len_left = 0;
+
+	if(add_len > 0)
+	{
+	    //for B1, the most significant two bytes are l(a), so will use (16-2) bytes additional data at most.
+	    block_cnt ++;
+		//Check if there is remaining additional data
+		if(add_len > (16-2))
+		{
+		    len_left = add_len - (16 - 2);
+            block_cnt += len_left/16;
+			if(len_left % 16)
+			    block_cnt++;
+			len_left = 0;
+		}
+	}
+
+    block_cnt += msg_len/16;
+	if(msg_len % 16)
+		block_cnt++;
+
+	return (block_cnt * 16);
+}
+
+
+static unsigned int get_ctr_input_output_size(size_t msg_len)
+{
+    unsigned int block_cnt = 1;//One Block for U/T
+
+	block_cnt += msg_len/16;
+	if(msg_len % 16)
+		block_cnt++;
+
+	return (block_cnt * 16);
+}
+
+int bl_sec_ccm_encrypt_and_tag(const uint8_t *key, unsigned int key_bytelen, size_t length, const unsigned char *iv, size_t iv_len, const unsigned char *add, size_t add_len,
+                         const unsigned char *input, unsigned char *output, unsigned char *tag, size_t tag_len)
+{
+	// Use cbc, clear iv to zero for CBC-MAC
+	unsigned char cbc_iv[16] = {0};
+	unsigned char ctr_iv[16] = {0};
+	unsigned int cbc_length = 0;
+	unsigned int ctr_length = 0;
+	unsigned int b_input_size= 0;
+	unsigned int b_output_size = 0;
+	unsigned char *b_input = NULL;
+	unsigned char *b_output = NULL;
+	int ret = 0;
+
+    // TODO check input arguments
+    cbc_length = get_cbc_mac_input_size(length, add_len);
+	//get the max size for b_input_size between cbc and ctr, max size is the value of cbc's input size
+	b_input_size = cbc_length;
+	//Allocate memory for input block, one block size is 16 bytes.
+	b_input = bl_os_malloc(b_input_size);
+
+	if(!b_input)
+	{
+	    ret = -1;
+	    goto exit;
+	}
+
+    //get the max size for b_output_size between cbc and ctr, max size is the value of ctr's output size
+	/* b_output_size = get_ctr_input_output_size(length); */
+    // reserve enough space for CBC
+	b_output_size = cbc_length;
+	b_output = bl_os_malloc(b_output_size);
+
+	if(!b_output)
+	{
+	    ret = -1;
+	    goto exit;
+	}
+
+	TG7100C_MemSet(b_input, 0, b_input_size);
+	TG7100C_MemSet(b_output, 0, b_output_size);
+
+	ret = get_cbc_mac_input(length, iv, iv_len, add, add_len, input, tag_len, b_input);
+
+	if(ret)
+	{
+	    ret = -1;
+		goto exit;
+	}
+
+    /**************AES-CBC*************/
+	bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_CBC);
+    bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, cbc_iv, 16, BFLB_CRYPT_DIR_ENCRYPT);
+    if(bflb_crypt_encrypt(&crypt_handle, b_input, cbc_length, 0, b_output) != BFLB_CRYPT_OK)
+	{
+		ret = -1;
+		goto exit;
+	}
+
+	/**************AES-CTR*************/
+	get_ctr_iv(ctr_iv, iv, iv_len);
+
+	get_ctr_enc_input(length, input, b_input, b_output, cbc_length/16);
+
+	ctr_length = get_ctr_input_output_size(length);
+	TG7100C_MemSet(b_output, 0, b_output_size);
+
+    bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_CTR);
+	bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, ctr_iv, 16, BFLB_CRYPT_DIR_ENCRYPT);
+	if(bflb_crypt_encrypt(&crypt_handle, b_input, ctr_length, 0, b_output) != BFLB_CRYPT_OK)
+	{
+	    ret = -1;
+		goto exit;
+	}
+
+
+	/*first output block is tag info*/
+	TG7100C_MemCpy_Fast(tag, b_output, tag_len);
+
+	/*second ~ ? output block is pt info*/
+	TG7100C_MemCpy_Fast(output, b_output + 16, length);
+
+exit:
+	 if(b_input)
+		 bl_os_free(b_input);
+	 if(b_output)
+		 bl_os_free(b_output);
+	 return ret;
+
+}
+
+ int bl_sec_ccm_auth_decrypt(const uint8_t *key, unsigned int key_bytelen, size_t length,const unsigned char *iv, size_t iv_len, const unsigned char *add,
+							 size_t add_len, const unsigned char *input, unsigned char *output, const unsigned char *tag, size_t tag_len)
+ {
+    unsigned char cbc_mac[16] = {0};
+    unsigned char cbc_iv[16] = {0};
+    unsigned char ctr_iv[16] = {0};
+    unsigned int cbc_length = 0;
+	unsigned int ctr_length = 0;
+    unsigned int b_input_size = 0;
+    unsigned int b_output_size = 0;
+    unsigned char *b_input  = NULL;
+    unsigned char *b_output = NULL;
+    int ret = 0;
+
+    // TODO check input arguments
+    //get the max size for b_input_size between cbc and ctr,max size is the value of cbc's input size
+    cbc_length = get_cbc_mac_input_size(length, add_len);
+    b_input_size = cbc_length;
+	//Allocate memory for input block, one block size is 16 bytes.
+	b_input = bl_os_malloc(b_input_size);
+
+	if(!b_input)
+	{
+	    ret = -1;
+		goto exit;
+	}
+
+    ctr_length = get_ctr_input_output_size(length);
+    //get the max size for b_output_size between cbc and ctr, max size is the value of ctr's output size
+    // reserve enough space for CBC
+    b_output_size = cbc_length;
+	b_output = bl_os_malloc(b_output_size);
+
+	if(!b_output)
+	{
+	    ret = -1;
+		goto exit;
+	}
+
+	 TG7100C_MemSet(b_input, 0, b_input_size);
+
+	 TG7100C_MemSet(b_output, 0, b_output_size);
+
+	 /* ctr part*/
+	 get_ctr_iv(ctr_iv, iv, iv_len);
+
+	 get_ctr_dec_input(length, input, tag, tag_len, b_input);
+
+	 bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_CTR);
+	 bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, ctr_iv, 16, BFLB_CRYPT_DIR_ENCRYPT);
+	 if(bflb_crypt_encrypt(&crypt_handle, b_input, ctr_length, 0, b_output) != BFLB_CRYPT_OK)
+	 {
+		 ret = -1;
+		 goto exit;
+	 }
+
+	 /* Copy CBC-MAC here */
+	 TG7100C_MemCpy_Fast(cbc_mac, b_output, tag_len);
+
+	 /* Copy plaintext here */
+	 TG7100C_MemCpy_Fast(output, b_output + 16, length);
+
+	 /* CBC-MAC part*/
+
+	 ret = get_cbc_mac_input(length, iv, iv_len, add, add_len, output, tag_len, b_input);
+
+	 if(ret)
+	 {
+		 ret = -1;
+		 goto exit;
+	 }
+
+	 TG7100C_MemSet(b_output, 0, b_output_size);
+
+	 /**************AES-CBC*************/
+	 bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_CBC);
+	 bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, cbc_iv, 16, BFLB_CRYPT_DIR_ENCRYPT);
+	 if(bflb_crypt_encrypt(&crypt_handle, b_input, cbc_length, 0, b_output) != BFLB_CRYPT_OK)
+	 {
+		 ret = -1;
+		 goto exit;
+	 }
+
+	 /* Check CBC-MAC */
+	 if (TG7100C_MemCmp(cbc_mac, b_output + (cbc_length/16 - 1) * 16, tag_len) != 0)
+	 {
+		 ret = -1;
+		 goto exit;
+	 }
+
+exit:
+	 if(b_input)
+	     bl_os_free(b_input);
+	 if(b_output)
+	     bl_os_free(b_output);
+     return ret;
+ }
+
+int bl_sec_aes_ecb_encrypt(const uint8_t *key, unsigned int key_bytelen, size_t length, const unsigned char *input, unsigned char *output)
+{
+     uint8_t decrypt_iv[16]={0};
+     bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_ECB);
+     bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, decrypt_iv, 16, BFLB_CRYPT_DIR_ENCRYPT);
+
+     if(bflb_crypt_encrypt(&crypt_handle, input, length, 0, output) != BFLB_CRYPT_OK)
+         return -1;
+     return 0;
+}
+
+int bl_sec_aes_ecb_decrypt(const uint8_t *key, unsigned int key_bytelen, size_t length, const unsigned char *input, unsigned char *output)
+{
+     uint8_t decrypt_iv[16]={0};
+     bflb_crypt_init(&crypt_handle, BFLB_CRYPT_TYPE_AES_ECB);
+     bflb_crypt_setkey(&crypt_handle, key, get_key_type(key_bytelen), key_bytelen, decrypt_iv, 16, BFLB_CRYPT_DIR_DECRYPT);
+
+     if(bflb_crypt_encrypt(&crypt_handle, input, length, 0, output) != BFLB_CRYPT_OK)
+         return -1;
+     return 0;
 }

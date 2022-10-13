@@ -47,15 +47,86 @@ static int get_ip_stat(hal_wifi_module_t *m,
                        hal_wifi_ip_stat_t *out_net_para,
                        hal_wifi_type_t wifi_type);
 
+static void _dump_hex(uint8_t *data, int len, int tab_num)
+{
+    int i;
+    for (i = 0; i < len; i++) {
+        os_printf("%02x ", data[i]);
+
+        if (!((i + 1) % tab_num)) {
+            os_printf("\r\n");
+        }
+    }
+
+    os_printf("\r\n");
+}
 static void __event_cb_wifi_event(input_event_t *event, void *private_data)
 {
     hal_wifi_ip_stat_t state;
-
+    struct sm_connect_tlv_desc* ele = NULL;
+#ifdef EN_COMBO_NET
+    extern int32_t aiot_ais_report_awss_status(uint8_t status, uint16_t subcode);
+#endif
     switch (event->code) {
         case CODE_WIFI_ON_DISCONNECT:
         {
             os_printf("[APP] [EVT] disconnect , Reason: %ld\r\n", event->value);
             WifiStatusHandler(NOTIFY_STATION_DOWN, event->value);
+#ifdef EN_COMBO_NET
+            extern int ms_cnt;
+            int rssi = 0;
+            // wifi_mgmr_rssi_get(&rssi);
+            // os_printf("[APP] [EVT] rssi: %d\r\n", rssi);
+            aiot_ais_report_awss_status(4, 0x0100 | event->value);
+#endif
+            /* Get every ele in diagnose tlv data */
+            uint8_t* buff = NULL;
+            buff = aos_malloc(512);
+            while ((ele = wifi_mgmr_diagnose_tlv_get_ele()))
+            {
+                os_printf("[APP] [EVT] diagnose tlv id: %d, len: %d, data: %p\r\n",
+                    ele->id, ele->len, ele->data);
+                  // _dump_hex(ele->data, ele->len, 32);
+#ifdef EN_COMBO_NET
+                // if ( ms_cnt >= 32000 && ms_cnt <= 43000)
+                if ( ms_cnt >= 2000 )
+                {
+                  // _dump_hex(ele->data, ele->len, 32);
+                  uint8_t len = 3 + 2 + 2 + 1 + ele->len;
+                  if (NULL != buff) {
+                    buff[0] = 0x01;
+                    buff[1] = 0x01;
+                    buff[2] = 0x06;
+                    buff[3] = 0x06;
+                    buff[4] = 2 + 1 + ele->len;
+                    buff[5] = (uint8_t)(ele->id&0xff);
+                    buff[6] = (uint8_t)(ele->id>>8);
+                    buff[7] = ele->len;
+                    memcpy(&buff[8], ele->data, ele->len);
+                    // _dump_hex(buff, len, 32);
+                    int ret = 0;
+                    do{
+                      ret = breeze_post(buff, len);
+                      aos_msleep(20);
+                    } while (ret != 0);
+                    // os_printf("[APP] [EVT] free=%p\r\n", buff);
+                    os_printf("[APP] [EVT] send TLV\r\n");
+
+                  }
+                }
+#endif
+                /* MUST free diagnose tlv data ele */
+                wifi_mgmr_diagnose_tlv_free_ele(ele);
+            }
+            if (NULL != buff) {
+              os_printf("[APP] [EVT] free=%p\r\n", buff);
+              aos_free(buff);
+            }
+// #ifdef EN_COMBO_NET
+//                 if ( ms_cnt >= 32000 && ms_cnt <= 43000) {
+//                   ms_cnt = 50000;
+//                 }
+// #endif
         }
         break;
         case CODE_WIFI_ON_CONNECTING:
@@ -65,6 +136,17 @@ static void __event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
         case CODE_WIFI_ON_CONNECTED:
         {
+            /* Get every ele in diagnose tlv data */
+            while ((ele = wifi_mgmr_diagnose_tlv_get_ele()))
+            {
+                // os_printf("[APP] [EVT] diagnose tlv data %d, id: %d, len: %d, data: %p\r\n", aos_now_ms(),
+                // ele->id, ele->len, ele->data);
+                // _dump_hex(ele->data, ele->len, 32);
+
+                /* MUST free diagnose tlv data */
+                wifi_mgmr_diagnose_tlv_free_ele(ele);
+            }
+
             os_printf("[APP] [EVT] connected %d\r\n", aos_now_ms());
         }
         break;
@@ -75,12 +157,11 @@ static void __event_cb_wifi_event(input_event_t *event, void *private_data)
         break;
         case CODE_WIFI_ON_GOT_IP:
         {
-          printf("[APP] [EVT] GOT IP is_suspend=%d\r\n", is_suspend);
-          if (!is_suspend) { 
-            os_printf("[APP] [EVT] GOT IP %d\r\n", aos_now_ms());
-            get_ip_stat(NULL, &state, STATION);
-            NetCallback(&state);
-          }
+            if (!is_suspend) {
+                os_printf("[APP] [EVT] GOT IP %d\r\n", aos_now_ms());
+                get_ip_stat(NULL, &state, STATION);
+                NetCallback(&state);
+            }
         }
         break;
         case CODE_WIFI_ON_SCAN_DONE:
@@ -104,6 +185,8 @@ static int wifi_init(hal_wifi_module_t *m) {
 
   tcpip_init(NULL, NULL);
 
+  extern int bl_pm_init(void);
+  bl_pm_init();
   extern void wifi_main(void *);
   krhino_task_create(&fw_task_fw, "task_fw", 0, 3, 0, fw_task_buf, STACK_TASK_FW_WORD, wifi_main, 1);
 
@@ -509,7 +592,7 @@ static int suspend(hal_wifi_module_t *m) {
     }
     aos_msleep(1000); 
   }
- 
+
   is_suspend = 0;
 
   return 0;
@@ -615,7 +698,7 @@ static void register_monitor_cb(hal_wifi_module_t *m, monitor_data_cb_t fn) {
 static void register_wlan_mgnt_monitor_cb(hal_wifi_module_t *m, monitor_data_cb_t fn) {
   //printf("[1] ----------------------------------------- register sniffer mgmt cb %p\r\n", fn);
   cb_mgmt = fn;
-  wifi_mgmr_mgmt_register(NULL, sniffer_mgmt);
+  wifi_mgmr_sniffer_register(NULL, sniffer_mgmt);
 }
 
 static int wlan_send_80211_raw_frame(hal_wifi_module_t *m, uint8_t *buf, int len) {
@@ -673,6 +756,115 @@ static int stop_ap(hal_wifi_module_t *m) {
   return 0;
 }
 
+static int coex_mode_set(hal_wifi_module_t *m, hal_wifi_coexmode_t coex_mode)
+{
+  int ret = 0;
+  switch (coex_mode)
+  {
+  case WIFI_COEXMODE_NONE: /* wifi combo chip none coexistence mode */
+  {
+    if (wifi_mgmr_ps_mode_get() == 1)
+    {
+      wifi_mgmr_exit_ps_mode();
+    }
+  }
+  break;
+
+  case WIFI_COEXMODE_WIFI_ONLY: /* wifi combo chip only wifi mode, ble mesh force closed */
+  {
+    if (wifi_mgmr_ps_mode_get() == 1)
+    {
+      wifi_mgmr_exit_ps_mode();
+    }
+    coex_pta_force_autocontrol_set((void *)1);
+  }
+  break;
+
+  case WIFI_COEXMODE_BLE_ONLY: /* wifi combo chip only ble&mesh mode, wifi force closed */
+  {
+    if (wifi_mgmr_ps_mode_get() == 1)
+    {
+      wifi_mgmr_exit_ps_mode();
+    }
+    coex_pta_force_autocontrol_set((void *)2);
+  }
+  break;
+
+  case WIFI_COEXMODE_WIFI_MESH: /* wifi combo chip ble-mesh & wifi RF coexistence */
+  {
+    if (wifi_mgmr_ps_mode_get() == 0)
+    {
+      wifi_mgmr_enter_ps_mode();
+    }
+  }
+  break;
+
+  case WIFI_COEXMODE_MAX:
+  default:
+  {
+    ret = -1;
+  }
+  break;
+  }
+
+  if (ret < 0)
+  {
+    printf("%s, invalid coexistence mode or mode set fail\r\n", __func__);
+  }
+  return ret;
+}
+
+static int coex_param_set(hal_wifi_module_t *m, hal_wifi_coexmode_t coex_mode, uint16_t param1, uint16_t param2)
+{
+  int ret = 0;
+  switch (coex_mode)
+  {
+  case WIFI_COEXMODE_NONE: /* wifi combo chip none coexistence mode */
+  {
+    ret = -1;
+  }
+  break;
+
+  case WIFI_COEXMODE_WIFI_ONLY: /* wifi combo chip only wifi mode, ble mesh force closed */
+  {
+    ret = -1;
+  }
+  break;
+
+  case WIFI_COEXMODE_BLE_ONLY: /* wifi combo chip only ble&mesh mode, wifi force closed */
+  {
+    ret = -1;
+  }
+  break;
+
+  case WIFI_COEXMODE_WIFI_MESH: /* wifi combo chip ble-mesh & wifi RF coexistence */
+  {
+    if (wifi_mgmr_ps_mode_get() == 1)
+    {
+      ret = wifi_mgmr_set_wifi_active_time(param1);
+    }
+    else
+    {
+      ret = -1;
+    }
+  }
+  break;
+
+  case WIFI_COEXMODE_MAX:
+  default:
+  {
+    ret = -1;
+  }
+  break;
+  }
+
+  if (ret < 0)
+  {
+    printf("%s %d param not support or set fail\r\n", __func__, coex_mode);
+  }
+  return ret;
+}
+
 hal_wifi_module_t sim_aos_wifi_tg7100c = {
     .base.name = "sim_aos_wifi_tg7100c",
     .init = wifi_init,
@@ -696,6 +888,12 @@ hal_wifi_module_t sim_aos_wifi_tg7100c = {
     .register_monitor_cb = register_monitor_cb,
     .register_wlan_mgnt_monitor_cb = register_wlan_mgnt_monitor_cb,
     .wlan_send_80211_raw_frame = wlan_send_80211_raw_frame,
-    .start_debug_mode = start_debug_mode,
-    .stop_debug_mode = stop_debug_mode};
 
+    /* wifi & ble coexistence related */
+    .coex_mode_set = coex_mode_set,
+    .coex_param_set = coex_param_set,
+
+    /* debug related */
+    .start_debug_mode = start_debug_mode,
+    .stop_debug_mode = stop_debug_mode
+};
